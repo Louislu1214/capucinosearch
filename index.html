@@ -151,6 +151,13 @@ mark{background:color-mix(in srgb,var(--signal) 55%,transparent);color:inherit;b
 .gate label{font-size:13px;color:var(--muted)}
 .gate input{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:11px 12px;font-size:16px;color:var(--ink)}
 .gate-err{color:var(--bad);font-size:13px;min-height:1em}
+.imp-ok{margin-top:12px;border:1px solid var(--ok);background:var(--ok-bg);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:10px}
+.imp-row{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.imp-row label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.imp-row input{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 8px;font-size:14px;color:var(--ink)}
+.imp-save{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn.big{padding:12px 22px;font-size:16px}
+.more summary{cursor:pointer;color:var(--muted);font-size:13px}
 .log{font-size:13px;white-space:pre-line;color:var(--muted);margin-top:8px}
 .savebar{position:sticky;bottom:0;background:var(--bg);padding-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .foot{color:var(--muted);font-size:12px;padding-block:0 28px}
@@ -191,7 +198,7 @@ const T={
   eta:"预计到港 ETA",etaF:"预计到厂",etd:"开船 ETD",loaded:"装柜日期",tbd:"待更新",daysLeft:"还有 {n} 天",today0:"今天到港",overdue:"已过 ETA {n} 天",clear:"清除",noRes:"没有找到相关货物，换个关键词试试。",fuzzy:"没有完全匹配的结果，以下是相近的货物：",
   pkg:"包装编号",cont:"柜号",seal:"封号",cat:"分类",use:"用途",spec:"型号/规格",mat:"材质",qty:"数量",pkgs:"件数",pkgType:"包装",detail:"明细",nw:"净重",gw:"毛重",cbm:"体积",inv:"发票",vessel:"船名/航次",note:"备注",route:"航线",status:"状态",photos:"货物与装柜照片",close:"关闭",admin:"管理",uncat:"未分类",
   st:{loaded:"已装柜",sailed:"在途",arrived:"已到港",clearing:"清关中",released:"已放行",delivered:"已到厂",pending:"ETA待更新",late:"已过ETA待确认"},
-  a:{title:"管理：导入清单与更新 ETA",imp:"导入装柜清单",impP:"选择国内发来的 Loading Detail Excel（可多选）。系统读取 LOADING DETAILS 表，按「柜号+包装编号」去重，同柜的多张发票会合并。",ships:"柜子与 ETA",shipsP:"以下全部选填。只导入清单不填也能直接保存，ETA 可以以后再补；ETA 按柜子填写，柜内所有货物共用。",save:"保存并发布",saved:"已保存，所有人刷新后看到最新数据",unsaved:"有未保存的修改",del:"删除此柜",delC:"再点一次确认删除",ro:"你只有查看权限，修改无法保存。",tr:"正在生成阿拉伯文名称…",none:"还没有柜子，先导入一份装柜清单。",imported:"导入 {f}：{n} 行，新增 {a}，更新 {u}，照片 {p} 张"}},
+  a:{title:"管理：导入清单与更新 ETA",imp:"导入装柜清单",impP:"选择国内发来的 Loading Detail Excel（可多选）。系统读取 LOADING DETAILS 表，按「柜号+包装编号」去重，同柜的多张发票会合并。",ships:"柜子与 ETA",shipsP:"以下全部选填。只导入清单不填也能直接保存，ETA 可以以后再补；ETA 按柜子填写，柜内所有货物共用。",save:"保存并上传",saved:"已保存，所有人刷新后看到最新数据",unsaved:"有未保存的修改",del:"删除此柜",delC:"再点一次确认删除",ro:"你只有查看权限，修改无法保存。",tr:"正在生成阿拉伯文名称…",none:"还没有柜子，先导入一份装柜清单。",imported:"导入 {f}：{n} 行，新增 {a}，更新 {u}，照片 {p} 张"}},
 };
 const STATUS_ORDER=["loaded","sailed","arrived","clearing","released","delivered"];
 const STATUS_TONE={loaded:"idle",sailed:"info",arrived:"warn",clearing:"warn",released:"ok",delivered:"ok",pending:"idle",late:"warn"};
@@ -219,7 +226,7 @@ const SB_URL="https://inerayabqrryrsuezlik.supabase.co";
 const SB_KEY="sb_publishable_-oC_xU9Fds-Re64XJnBFFw_-gOwB6ph";
 const SB_LIB="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js";
 let sbClient=null, ADMIN_PW="", SRC="";
-const VER="v5 · 2026-10-23";
+const VER="v6 · 2026-10-23";
 async function sb(){
   if(sbClient) return sbClient;
   await loadScript(SB_LIB);
@@ -480,17 +487,17 @@ function openAdmin(){
   showLayer(`<div class="sheet adm" role="dialog" aria-modal="true" aria-labelledby="adm-h">
     <div class="sheet-h"><h3 id="adm-h">${esc(ta("title"))}</h3><button type="button" class="x" data-close>${esc(t("close"))}</button></div>
     <section><h4>${esc(ta("imp"))}</h4><p>${esc(ta("impP"))}</p>
-      <label class="drop" for="xfile">Excel (.xlsx)<input id="xfile" type="file" accept=".xlsx,.xlsm" multiple></label><div class="log" id="implog"></div></section>
-    <section><h4>${esc(ta("ships"))}</h4><p>${esc(ta("shipsP"))}</p><div id="shipforms"></div></section>
-    <div class="savebar"><button type="button" class="btn" id="saveBtn">${esc(ta("save"))}</button><span id="saveMsg" class="it-sub"></span></div></div>`);
+      <label class="drop" for="xfile">选择装柜清单 Excel（.xlsx）<input id="xfile" type="file" accept=".xlsx,.xlsm" multiple></label><div class="log" id="implog"></div><div id="impResult"></div></section>
+    <section><h4>ETA</h4><p>按票填写预计到港日期。都是选填，可以以后再补。</p><div id="shipforms"></div></section>
+    <div class="savebar"><button type="button" class="btn" id="saveBtn" data-save>${esc(ta("save"))}</button><span id="saveMsg" class="it-sub savemsg"></span></div></div>`);
   renderShipForms(); updateSaveMsg();
-  $("#xfile").addEventListener("change",e=>importFiles([...e.target.files]));
-  $("#saveBtn").addEventListener("click",save);
+  $("#xfile").addEventListener("change",async e=>{const fs=[...e.target.files];if(!fs.length)return;await importFiles(fs);e.target.value="";});
+  $(".adm").addEventListener("click",e=>{if(e.target.closest("[data-save]"))save();});
 }
 
 /* ---------- 保存到 Supabase 数据库 ---------- */
 async function dbSave(){
-  const msgEl=$("#saveMsg"), b=$("#saveBtn"); b.disabled=true;
+  const msgEl={set textContent(t){setSaveMsg(t);}}; setSaveBtns(true);
   try{
     const c=await sb(); const paths=Object.keys(pendingFiles); const map={}; let n=0;
     for(const p of paths){
@@ -506,53 +513,76 @@ async function dbSave(){
     DATA.updated=new Date().toISOString().slice(0,10);
     const {error}=await c.rpc("save_data",{pw:ADMIN_PW,payload:DATA});
     if(error) throw Object.assign(new Error(error.message),{code:error.code});
-    dirty=false; SRC="数据库"; renderFoot(); updateSaveMsg(); toast("已保存，大家刷新页面就能看到。");
-    msgEl.textContent="已保存到数据库 "+new Date().toLocaleTimeString("zh-CN");
+    dirty=false; SRC="数据库"; renderFoot(); toast("已保存并上传，大家刷新页面就能看到。");
+    closeLayer(); showSaved();
   }catch(e){
     msgEl.textContent=(e.code==="28P01"||/密码错误/.test(e.message))?"保存失败：密码不对，请关闭管理后重新进入。"
       :e.kind==="photo"?"照片上传失败："+e.message:"保存失败："+(e.message||e)+"，请稍后再点一次。";
-    b.disabled=false;
+    setSaveBtns(false);
   }
 }
 
 function renderShipForms(){
   const box=$("#shipforms"); if(!box) return;
   if(!DATA.shipments.length){box.innerHTML=`<div class="empty-state">${esc(ta("none"))}</div>`;return;}
-  box.innerHTML=DATA.shipments.map((sh,i)=>{
-    const id=k=>`sf-${i}-${k}`;
+  box.innerHTML=[...DATA.shipments].reverse().map(sh=>{
+    const i=DATA.shipments.indexOf(sh), id=k=>`sf-${i}-${k}`;
+    const its=DATA.items.filter(x=>x.ship===sh.id), names=its.slice(0,4).map(x=>splitName(x.name).zh||splitName(x.name).en).join("、")+(its.length>4?"…":"");
     return `<div class="shipform" data-sid="${esc(sh.id)}">
-      <div class="t"><b class="mono">${esc(sh.container)}</b><span class="it-sub mono">${esc((sh.invoices||[]).join(" / "))} · ${esc(t("loaded"))} ${esc(sh.loaded||"")}</span></div>
+      <div class="t"><b>${esc(ticketName(sh))}</b><span class="it-sub">${its.length} 件货${sh.loaded?" · 装柜 "+esc(sh.loaded):""}</span></div>
+      <div class="wide it-sub">${esc(names)}</div>
       <label for="${id("eta")}">${esc(t("eta"))}<input id="${id("eta")}" type="date" data-f="eta" value="${esc(sh.eta)}"></label>
+      <details class="wide more"><summary>更多选填项</summary><div class="shipform" style="border:0;margin:8px 0 0;padding:0">
       <label for="${id("etaF")}">${esc(t("etaF"))}<input id="${id("etaF")}" type="date" data-f="etaFactory" value="${esc(sh.etaFactory)}"></label>
       <label for="${id("etd")}">${esc(t("etd"))}<input id="${id("etd")}" type="date" data-f="etd" value="${esc(sh.etd)}"></label>
-      <label for="${id("st")}">${esc(t("status"))}<select id="${id("st")}" data-f="status"><option value="">${esc(lang==="zh"?"自动（按 ETA）":"Auto (from ETA)")}</option>${STATUS_ORDER.map(k=>`<option value="${k}" ${sh.status===k?"selected":""}>${esc(T[lang].st[k])}</option>`).join("")}</select></label>
+      <label for="${id("st")}">${esc(t("status"))}<select id="${id("st")}" data-f="status"><option value="">自动（按 ETA）</option>${STATUS_ORDER.map(k=>`<option value="${k}" ${sh.status===k?"selected":""}>${esc(T.zh.st[k])}</option>`).join("")}</select></label>
       <label for="${id("v")}">${esc(t("vessel"))}<input id="${id("v")}" type="text" data-f="vessel" value="${esc(sh.vessel)}"></label>
-      <label for="${id("seal")}">${esc(t("seal"))}<input id="${id("seal")}" type="text" data-f="seal" value="${esc(sh.seal)}"></label>
       <label for="${id("n")}" class="wide">${esc(t("note"))}<input id="${id("n")}" type="text" data-f="note" value="${esc(sh.note)}"></label>
-      <div class="wide"><button type="button" class="btn warn" data-del="${esc(sh.id)}">${esc(ta("del"))}</button></div></div>`;}).join("");
-  box.oninput=box.onchange=e=>{const f=e.target.dataset.f;if(!f)return;const sid=e.target.closest("[data-sid]").dataset.sid;const sh=shipById(sid);sh[f]=e.target.value;markDirty();};
+      <div class="wide"><button type="button" class="btn warn" data-del="${esc(sh.id)}">删除这一票</button></div></div></details></div>`;}).join("");
+  box.oninput=box.onchange=e=>{const f=e.target.dataset.f;if(!f)return;const sid=e.target.closest("[data-sid]").dataset.sid;const sh=shipById(sid);sh[f]=e.target.value;const tw=document.querySelector(`#impResult [data-sid="${CSS.escape(sid)}"] [data-f="${f}"]`);if(tw)tw.value=e.target.value;markDirty();};
   box.onclick=e=>{const b=e.target.closest("[data-del]");if(!b)return;
-    if(b.dataset.armed!=="1"){b.dataset.armed="1";b.textContent=ta("delC");return;}
+    if(b.dataset.armed!=="1"){b.dataset.armed="1";b.textContent="再点一次确认删除这一票";return;}
     const sid=b.dataset.del;DATA.shipments=DATA.shipments.filter(s=>s.id!==sid);DATA.items=DATA.items.filter(i=>i.ship!==sid);if(S.ship===sid)S.ship="";markDirty();renderShipForms();};
 }
+function ticketName(sh){return (sh.invoices&&sh.invoices.length)?"发票 "+sh.invoices.join(" / "):"未读到发票号";}
+let lastImported=[];
+function renderImportResult(){
+  const box=$("#impResult"); if(!box) return;
+  const ships=lastImported.map(shipById).filter(x=>x.id);
+  if(!ships.length){box.innerHTML="";return;}
+  box.innerHTML=`<div class="imp-ok">${ships.map(sh=>{const n=DATA.items.filter(x=>x.ship===sh.id).length;const i=DATA.shipments.indexOf(sh);
+    return `<div class="imp-row" data-sid="${esc(sh.id)}"><div><b>${esc(ticketName(sh))}</b><div class="it-sub">${n} 件货已读取</div></div>
+      <label for="ir-${i}">${esc(t("eta"))}（选填）<input id="ir-${i}" type="date" data-f="eta" value="${esc(sh.eta)}"></label></div>`;}).join("")}
+    <div class="imp-save"><button type="button" class="btn big" data-save>保存并上传</button><span class="it-sub savemsg"></span></div></div>`;
+  box.oninput=box.onchange=e=>{const f=e.target.dataset.f;if(!f)return;const sh=shipById(e.target.closest("[data-sid]").dataset.sid);sh[f]=e.target.value;
+    const twin=document.querySelector(`#shipforms [data-sid="${CSS.escape(sh.id)}"] [data-f="${f}"]`); if(twin) twin.value=e.target.value; markDirty();};
+  updateSaveMsg();
+}
+function showSaved(){
+  const ids=lastImported.length?lastImported:[]; lastImported=[];
+  S.ship=ids.length===1?ids[0]:""; S.cat="";S.use="";S.q="";const q=$("#q");if(q)q.value="";
+  render(); window.scrollTo({top:0,behavior:"smooth"});
+}
 function markDirty(){dirty=true;buildIndex();renderShips();renderCats();renderList();updateSaveMsg();}
-function updateSaveMsg(){const m=$("#saveMsg");if(!m)return;m.textContent=readOnly?ta("ro"):dirty?ta("unsaved"):"";const b=$("#saveBtn");if(b)b.disabled=readOnly||!dirty;}
+function setSaveMsg(t){document.querySelectorAll(".savemsg").forEach(m=>m.textContent=t);}
+function setSaveBtns(dis){document.querySelectorAll("[data-save]").forEach(b=>b.disabled=dis);}
+function updateSaveMsg(){if(!$("#saveMsg"))return;setSaveMsg(readOnly?ta("ro"):dirty?ta("unsaved"):"");setSaveBtns(readOnly||!dirty);}
 function toast(msg){const d=document.createElement("div");d.className="toast";d.setAttribute("role","status");d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),3200);}
 
 async function save(){
   if(GH_MODE) return dbSave();
   const art=await window.claude?.use?.("artifact").catch(()=>null);
   if(!art){readOnly=true;updateSaveMsg();return;}
-  const b=$("#saveBtn"); b.disabled=true;
+  setSaveBtns(true);
   DATA.updated=new Date().toISOString().slice(0,10);
   const files={"data.json":{content:JSON.stringify(DATA,null,1),contentType:"application/json"}};
   for(const p in pendingFiles) files[p]={content:pendingFiles[p],contentType:"image/jpeg"};
-  try{await art.publish(files);for(const p in pendingFiles)delete pendingFiles[p];dirty=false;updateSaveMsg();toast(ta("saved"));}
+  try{await art.publish(files);for(const p in pendingFiles)delete pendingFiles[p];dirty=false;toast(ta("saved"));closeLayer();showSaved();}
   catch(e){
     const code=e&&e.code;
     if(code==="not_writer"||code==="not_granted"||code==="not_declared"||code==="consent_required"){readOnly=true;updateSaveMsg();}
     else if(code==="conflict"){/* view reloads to the newer version */}
-    else{$("#saveMsg").textContent=(lang==="zh"?"保存失败：":"Save failed: ")+(e&&e.message||code||"");b.disabled=false;}
+    else{setSaveMsg("保存失败："+(e&&e.message||code||""));setSaveBtns(false);}
   }
 }
 
@@ -573,7 +603,7 @@ async function resizeJpeg(blob,maxw){
 async function importFiles(files){
   const log=$("#implog"); log.textContent="…";
   try{await libs();}catch(e){log.textContent=lang==="zh"?"无法加载 Excel 读取组件，请检查网络后重试。":"Could not load the Excel reader. Check the connection and try again.";return;}
-  const lines=[], newItems=[];
+  const lines=[], newItems=[]; lastImported=[];
   for(const f of files){
     try{
       const buf=await f.arrayBuffer();
@@ -607,7 +637,7 @@ async function importFiles(files){
           for(const m of x.matchAll(/name="(ID_[0-9A-Fa-f]+)"[\s\S]*?r:embed="(rId\d+)"/g)) if(rm[m[2]]) imgMap[m[1]]="xl/"+rm[m[2]].replace(/^\.?\//,"");}}catch(e){}
       const grab=async(r,c,path,maxw)=>{const x=cell(r,c);const fm=x&&(x.f||(typeof x.v==="string"?x.v:""));const m=fm&&String(fm).match(/ID_[0-9A-Fa-f]+/);if(!m||!imgMap[m[0]]||!zip)return "";const zf=zip.file(imgMap[m[0]]);if(!zf)return "";
         try{const b=await resizeJpeg(await zf.async("blob"),maxw);pendingFiles[path]=b;blobUrls[path]=URL.createObjectURL(b);return path;}catch(e){return "";}};
-      let cont="",seal="",n=0,a=0,u=0,p=0;
+      let cont="",seal="",n=0,a=0,u=0,p=0; const touched=new Set();
       for(let r=hr+1;r<=range.e.r;r++){
         const pkg=String(val(r,col.pkg)||""),name=String(val(r,col.name)||"");
         if(!pkg&&!name)continue;
@@ -616,7 +646,7 @@ async function importFiles(files){
         const ship=cont||("INV-"+(meta.inv||f.name));
         let sh=shipById(ship);
         if(!sh.id){sh={id:ship,container:ship,seal:seal||"",size:meta.size||"",invoices:[],pol:meta.route?.[0]||"",pod:meta.route?.[1]||"",loaded:meta.date||"",etd:"",eta:"",etaFactory:"",status:"",vessel:"",note:""};DATA.shipments.push(sh);}
-        if(seal&&!sh.seal)sh.seal=seal;
+        if(seal&&!sh.seal)sh.seal=seal; touched.add(sh.id);
         if(meta.inv&&!sh.invoices.includes(meta.inv))sh.invoices.push(meta.inv);
         const id=ship+"|"+(pkg||name), h=fnv(id), num=x=>typeof x==="number"?x:(parseFloat(x)||null);
         const L=num(val(r,col.L)),W=num(val(r,col.W)),H=num(val(r,col.H)),K=num(val(r,col.pkgs));
@@ -630,11 +660,12 @@ async function importFiles(files){
         if(old){Object.assign(old,it);u++;}else{DATA.items.push(it);a++;}
         if(!it.ar)newItems.push(old||it); n++;
       }
+      for(const x of touched) if(!lastImported.includes(x)) lastImported.push(x);
       lines.push(ta("imported",{f:f.name,n,a,u,p})+(meta.inv?`（发票 ${meta.inv}）`:"（没读到发票号）"));
     }catch(e){lines.push(`${f.name}: ${e&&e.message||e}`);}
     log.textContent=lines.join("\n")+"\n清单已读取，可以直接点下方按钮保存。";
   }
-  markDirty(); renderShipForms();
+  markDirty(); renderShipForms(); renderImportResult();
 }
 })();
 </script>
