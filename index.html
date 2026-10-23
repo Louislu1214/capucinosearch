@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.45 system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>金城卫浴到货查询</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: phone-first lookup — sticky search on top, shipment strip, category tiles, then a single-column result list; admin drawer slides over. */
+:root{
+  --bg:#ECEFEE; --surface:#FFFFFF; --sunk:#E2E7E5; --ink:#14211F; --muted:#5A6A67; --line:#D0D8D6;
+  --bar:#14211F; --bar-ink:#ECEFEE; --accent:#0B5D6B; --accent-ink:#FFFFFF; --signal:#F2C230; --signal-ink:#1C1A10;
+  --ok:#2C7A4B; --ok-bg:#DDF0E4; --warn:#9A5B00; --warn-bg:#FBEBC9; --info:#1E5A8F; --info-bg:#DCE9F6; --idle:#5A6A67; --idle-bg:#E4E9E8; --bad:#A3322A;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans","PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+  --f-ar:"IBM Plex Sans Arabic","Noto Sans Arabic",Tahoma,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1716; --surface:#172220; --sunk:#1E2B28; --ink:#E4ECEA; --muted:#94A6A2; --line:#2B3936;
+  --bar:#08100F; --bar-ink:#E4ECEA; --accent:#5DBFCC; --accent-ink:#0B1A1C; --signal:#E6B829; --signal-ink:#1C1A10;
+  --ok:#6FCF97; --ok-bg:#1B3526; --warn:#F2B85B; --warn-bg:#3A2C12; --info:#8CBEF0; --info-bg:#182C40; --idle:#94A6A2; --idle-bg:#24302E; --bad:#F08A80;
+  color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0F1716; --surface:#172220; --sunk:#1E2B28; --ink:#E4ECEA; --muted:#94A6A2; --line:#2B3936;
+  --bar:#08100F; --bar-ink:#E4ECEA; --accent:#5DBFCC; --accent-ink:#0B1A1C; --signal:#E6B829; --signal-ink:#1C1A10;
+  --ok:#6FCF97; --ok-bg:#1B3526; --warn:#F2B85B; --warn-bg:#3A2C12; --info:#8CBEF0; --info-bg:#182C40; --idle:#94A6A2; --idle-bg:#24302E; --bad:#F08A80;
+  color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
+.ar{font-family:var(--f-ar)}
+.mono{font-family:var(--f-mono);letter-spacing:.01em}
+.num{font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bar)}
+.top{background:var(--bar);color:var(--bar-ink)}
+.top .wrap{display:flex;align-items:center;gap:12px;padding-block:14px 10px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;min-width:0;flex:1}
+.brand h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:26px;letter-spacing:.02em;line-height:1.05}
+.brand small{opacity:.72;font-size:12px;letter-spacing:.06em}
+.adminbtn{background:none;border:1px solid color-mix(in srgb,var(--bar-ink) 35%,transparent);color:var(--bar-ink);border-radius:999px;padding:6px 12px;font-size:13px}
+
+.searchbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bar);padding-bottom:12px}
+.sbox{display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:12px;padding:0 6px 0 14px;border:2px solid transparent}
+.sbox:focus-within{border-color:var(--signal)}
+.sbox svg{flex:none;color:var(--muted)}
+#q{flex:1;min-width:0;border:0;background:none;padding:13px 0;font-size:17px;outline:none}
+#qclear{border:0;background:var(--sunk);border-radius:8px;padding:6px 10px;font-size:13px}
+.hint{color:color-mix(in srgb,var(--bar-ink) 70%,transparent);font-size:12px;margin-top:6px}
+
+main{display:flex;flex-direction:column;gap:22px;padding-block:18px 40px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:0 0 8px}
+.sec-h h2{margin:0;font-family:var(--f-display);font-size:15px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sec-h span{font-size:12px;color:var(--muted)}
+
+.ships{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;scroll-snap-type:x proximity}
+.ship{flex:0 0 auto;min-width:250px;max-width:320px;scroll-snap-align:start;text-align:start;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;gap:6px}
+.ship[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.ship .cno{font-family:var(--f-mono);font-size:14px;font-weight:500}
+.ship .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ship .eta{font-family:var(--f-display);font-size:28px;font-weight:700;line-height:1}
+.ship .meta{font-size:12px;color:var(--muted)}
+
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.s-ok{color:var(--ok);background:var(--ok-bg)} .s-warn{color:var(--warn);background:var(--warn-bg)}
+.s-info{color:var(--info);background:var(--info-bg)} .s-idle{color:var(--idle);background:var(--idle-bg)}
+
+.cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.cat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;text-align:start;display:flex;flex-direction:column;gap:2px;min-height:72px}
+.cat b{font-size:15px;font-weight:600}
+.cat small{color:var(--muted);font-size:12px}
+.cat .n{font-family:var(--f-display);font-size:22px;font-weight:700;line-height:1;margin-top:auto}
+.cat[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.cat[aria-pressed="true"] small{color:inherit;opacity:.8}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chips-label{font-size:12px;color:var(--muted);align-self:center;margin-inline-end:2px}
+
+.active{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.active .chip{background:var(--sunk);border-color:transparent}
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px;text-align:start;width:100%}
+.thumb{width:64px;height:64px;border-radius:8px;background:var(--sunk);object-fit:cover;display:block}
+.thumb.empty{display:grid;place-items:center;color:var(--muted);font-family:var(--f-mono);font-size:11px}
+.it-main{min-width:0;display:flex;flex-direction:column;gap:2px}
+.it-name{font-weight:600;font-size:16px;line-height:1.25;overflow-wrap:anywhere}
+.it-sub{color:var(--muted);font-size:12.5px;overflow-wrap:anywhere}
+.it-tags{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;color:var(--muted);margin-top:2px}
+.it-tags .mono{color:var(--ink)}
+.it-eta{display:flex;flex-direction:column;align-items:flex-end;gap:4px;text-align:end}
+.it-eta .d{font-family:var(--f-display);font-size:22px;font-weight:700;line-height:1}
+.it-eta .c{font-size:12px;color:var(--muted)}
+.countdown{background:var(--signal);color:var(--signal-ink);border-radius:6px;padding:1px 7px;font-weight:600;font-size:12px}
+mark{background:color-mix(in srgb,var(--signal) 55%,transparent);color:inherit;border-radius:2px;padding:0 1px}
+.empty-state{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:22px;text-align:center;color:var(--muted)}
+.fuzzy-note{font-size:13px;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:8px 12px}
+@media (max-width:520px){
+  .item{grid-template-columns:56px minmax(0,1fr)}
+  .thumb{width:56px;height:56px}
+  .it-eta{grid-column:1 / -1;flex-direction:row;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding-top:8px}
+}
+
+/* sheet */
+.overlay{position:fixed;inset:0;background:rgba(8,14,13,.55);z-index:20;display:flex;justify-content:center;align-items:flex-end}
+.sheet{background:var(--bg);width:100%;max-width:760px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+@media (min-width:760px){.overlay{align-items:center}.sheet{border-radius:16px;max-height:88vh}}
+.sheet-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+.sheet-h h3{margin:0;font-size:20px;line-height:1.25}
+.x{border:0;background:var(--sunk);border-radius:8px;padding:6px 12px;flex:none}
+.hero-eta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:14px}
+.hero-eta>div{background:var(--surface);padding:10px 12px}
+.hero-eta label{display:block;font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.hero-eta .v{font-family:var(--f-display);font-size:24px;font-weight:700}
+.photos{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px}
+.photos img{height:200px;width:auto;max-width:none;border-radius:8px;background:var(--sunk)}
+.kv{display:grid;grid-template-columns:minmax(90px,max-content) minmax(0,1fr);gap:6px 14px;margin:0;font-size:14px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;overflow-wrap:anywhere;white-space:pre-line}
+
+/* admin */
+.adm section{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.adm h4{margin:0 0 8px;font-size:15px}
+.adm p{margin:0 0 10px;color:var(--muted);font-size:13px}
+.btn{border:0;border-radius:8px;padding:9px 14px;background:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.ghost{background:var(--sunk);color:var(--ink)}
+.btn.warn{background:none;color:var(--bad);border:1px solid var(--line)}
+.btn:disabled{opacity:.5;cursor:default}
+.drop{display:block;border:2px dashed var(--line);border-radius:var(--r);padding:18px;text-align:center;color:var(--muted);cursor:pointer}
+.drop input{display:block;margin:8px auto 0;max-width:100%}
+.shipform{border-top:1px solid var(--line);padding-top:12px;margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 10px}
+.shipform:first-of-type{border-top:0;margin-top:0;padding-top:0}
+.shipform .t{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.shipform label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.shipform input,.shipform select{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:7px 8px;font-size:14px;color:var(--ink);min-width:0}
+.shipform .wide{grid-column:1/-1}
+.gate{display:flex;flex-direction:column;gap:10px}
+.gate label{font-size:13px;color:var(--muted)}
+.gate input{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:11px 12px;font-size:16px;color:var(--ink)}
+.gate-err{color:var(--bad);font-size:13px;min-height:1em}
+.log{font-size:13px;white-space:pre-line;color:var(--muted);margin-top:8px}
+.savebar{position:sticky;bottom:0;background:var(--bg);padding-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:40;font-size:14px;max-width:90vw}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(16px);opacity:.6}}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><h1 id="t-title">金城卫浴到货查询</h1><small id="t-sub">装柜清单 · 到货时间</small></div>
+    <button type="button" class="adminbtn" id="adminOpen" hidden>管理</button>
+  </div>
+</header>
+<div class="searchbar">
+  <div class="wrap">
+    <label class="sbox" for="q">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" autocomplete="off" enterkeyhint="search">
+      <button type="button" id="qclear" hidden>×</button>
+    </label>
+    <div class="hint" id="t-hint"></div>
+  </div>
+</div>
+<main class="wrap" id="main">
+  <section><div class="sec-h"><h2 id="t-ships"></h2><span id="t-today"></span></div><div class="ships" id="ships"></div></section>
+  <section><div class="sec-h"><h2 id="t-cats"></h2></div><div class="cats" id="cats"></div><div class="chips" id="uses" aria-label="用途说明"></div></section>
+  <section><div class="sec-h"><h2 id="t-results"></h2><span id="count" class="num"></span></div><div class="active" id="active"></div><div class="list" id="list" style="margin-top:10px"></div></section>
+</main>
+<div id="layer"></div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- i18n ---------- */
+const T={
+ zh:{title:"金城卫浴到货查询",sub:"装柜清单 · 到货时间",hint:"可输入货物名称（中文或英文）、用途、包装编号、柜号，支持模糊和错字查找",ph:"搜索货物，例如：氧化锌、kaolin、FJS…",ships:"在途柜子",cats:"按分类查找",results:"货物",all:"全部",items:"项",today:"今天",
+  eta:"预计到港 ETA",etaF:"预计到厂",etd:"开船 ETD",loaded:"装柜日期",tbd:"待更新",daysLeft:"还有 {n} 天",today0:"今天到港",overdue:"已过 ETA {n} 天",clear:"清除",noRes:"没有找到相关货物，换个关键词试试。",fuzzy:"没有完全匹配的结果，以下是相近的货物：",
+  pkg:"包装编号",cont:"柜号",seal:"封号",cat:"分类",use:"用途",spec:"型号/规格",mat:"材质",qty:"数量",pkgs:"件数",pkgType:"包装",detail:"明细",nw:"净重",gw:"毛重",cbm:"体积",inv:"发票",vessel:"船名/航次",note:"备注",route:"航线",status:"状态",photos:"货物与装柜照片",close:"关闭",admin:"管理",uncat:"未分类",
+  st:{loaded:"已装柜",sailed:"在途",arrived:"已到港",clearing:"清关中",released:"已放行",delivered:"已到厂",pending:"ETA待更新",late:"已过ETA待确认"},
+  a:{title:"管理：导入清单与更新 ETA",imp:"导入装柜清单",impP:"选择国内发来的 Loading Detail Excel（可多选）。系统读取 LOADING DETAILS 表，按「柜号+包装编号」去重，同柜的多张发票会合并。",ships:"柜子与 ETA",shipsP:"车间看到的到货时间来自这里。ETA 按柜子填写，柜内所有货物共用。",save:"保存并发布",saved:"已保存，所有人刷新后看到最新数据",unsaved:"有未保存的修改",del:"删除此柜",delC:"再点一次确认删除",ro:"你只有查看权限，修改无法保存。",tr:"正在生成阿拉伯文名称…",none:"还没有柜子，先导入一份装柜清单。",imported:"导入 {f}：{n} 行，新增 {a}，更新 {u}，照片 {p} 张"}},
+};
+const STATUS_ORDER=["loaded","sailed","arrived","clearing","released","delivered"];
+const STATUS_TONE={loaded:"idle",sailed:"info",arrived:"warn",clearing:"warn",released:"ok",delivered:"ok",pending:"idle",late:"warn"};
+const CATS=[
+ {k:"raw",zh:"原材料",en:"Raw materials",ar:"مواد خام",kw:["原材料","原料","rawmaterial"]},
+ {k:"chem",zh:"化学品 / 辅材",en:"Chemicals & consumables",ar:"مواد كيميائية ومستهلكات",kw:["化学品","辅材","消耗品","chemical"]},
+ {k:"mach",zh:"机器设备",en:"Machinery & equipment",ar:"آلات ومعدات",kw:["机器","设备","machine","equipment"]},
+ {k:"elec",zh:"电气 / 灯具",en:"Electrical & lighting",ar:"كهربائيات وإنارة",kw:["电气","电器","灯","electrical","led","lighting"]},
+ {k:"spare",zh:"配件 / 备件",en:"Spare parts",ar:"قطع غيار",kw:["配件","备件","spare","parts"]},
+ {k:"tool",zh:"五金工具",en:"Hardware & tools",ar:"عدد وأدوات",kw:["五金","工具","hardware","tool"]},
+ {k:"mould",zh:"模具",en:"Moulds",ar:"قوالب",kw:["模具","mould","mold"]},
+ {k:"pack",zh:"包装材料",en:"Packaging",ar:"مواد تغليف",kw:["包装","packag","carton"]},
+ {k:"office",zh:"办公 / 生活用品",en:"Office & living",ar:"لوازم مكتبية ومعيشية",kw:["办公","生活","office","living"]},
+ {k:"sample",zh:"样品",en:"Samples",ar:"عينات",kw:["样品","sample"]}
+];
+
+/* ---------- state ---------- */
+let lang="zh";
+let DATA={shipments:[],items:[]};
+const S={q:"",cat:"",use:"",ship:""};
+const blobUrls={};      // path -> objectURL for photos imported in this view
+const pendingFiles={};  // path -> Blob, waiting to be published
+let dirty=false, canWrite=false, readOnly=false;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const t=(k,v)=>{let s=T[lang][k]??T.zh[k]??k;if(v)for(const x in v)s=s.replace("{"+x+"}",v[x]);return s};
+const ta=(k,v)=>{let s=T.zh.a[k]||k;if(v)for(const x in v)s=s.replace("{"+x+"}",v[x]);return s};
+
+/* ---------- text helpers ---------- */
+const CJK=/[㐀-鿿豈-﫿　-〿＀-￯]/;
+function splitName(raw){
+  raw=String(raw||"").replace(/\s+/g," ").trim();
+  let zh="",en="";
+  for(const ch of raw){ if(CJK.test(ch)) zh+=ch; else en+=ch; }
+  zh=zh.replace(/[（）()]/g,"").trim(); en=en.replace(/^[\s\-–,，/]+|[\s\-–,，/]+$/g,"").replace(/\s+/g," ");
+  // "ZINC OXIDE Zinc oxide" -> "Zinc oxide"
+  const w=en.split(" "); if(w.length%2===0){const h=w.length/2;if(w.slice(0,h).join(" ").toLowerCase()===w.slice(h).join(" ").toLowerCase())en=w.slice(h).join(" ");}
+  return {zh,en};
+}
+function bi(raw){const s=splitName(raw);return lang==="zh"?(s.zh||s.en):(s.en||s.zh);}
+function catOf(raw){
+  const n=norm(raw);
+  if(!n) return {k:"none",zh:T.zh.uncat,en:T.en.uncat,ar:T.ar.uncat};
+  for(const c of CATS) if(c.kw.some(k=>n.includes(norm(k)))) return c;
+  const s=splitName(raw); return {k:"x:"+n,zh:s.zh||s.en,en:s.en||s.zh,ar:s.en||s.zh};
+}
+function norm(s){
+  return String(s??"").normalize("NFKC").toLowerCase()
+   .replace(/[ً-ٰٟـ]/g,"").replace(/[أإآٱ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي")
+   .replace(/[\s\-_.,，。、/\\()（）:：;；'"“”‘’\[\]【】=+*#]/g,"");
+}
+function lev(a,b,max){
+  if(Math.abs(a.length-b.length)>max) return max+1;
+  let prev=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){const cur=[i];let best=i;
+    for(let j=1;j<=b.length;j++){cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));best=Math.min(best,cur[j]);}
+    if(best>max) return max+1; prev=cur;}
+  return prev[b.length];
+}
+function subseq(tok,hay){let i=0,first=-1,last=-1;for(let j=0;j<hay.length&&i<tok.length;j++){if(hay[j]===tok[i]){if(first<0)first=j;last=j;i++;}}return i===tok.length&&(last-first)<=tok.length*3;}
+
+/* ---------- search index ---------- */
+let INDEX=[];
+function shipById(id){return DATA.shipments.find(s=>s.id===id)||{};}
+function buildIndex(){
+  INDEX=DATA.items.map(it=>{
+    const sh=shipById(it.ship), c=catOf(it.cat);
+    const f=[[it.name,3],[it.ar,3],[it.pkg,3],[c.zh+" "+c.en+" "+c.ar+" "+it.cat,2],[it.use,2],[it.ship,2],[sh.seal,1],[(sh.invoices||[]).join(" "),1],[it.detail,1],[it.size,1],[it.material,1],[it.pkgType,1]];
+    const fields=f.filter(x=>x[0]).map(([v,w])=>{const raw=String(v);return {n:norm(raw),w,words:raw.normalize("NFKC").toLowerCase().split(/[^a-z0-9؀-ۿ]+/).map(norm).filter(x=>x.length>=3)};});
+    return {it,fields,cat:c};
+  });
+}
+function scoreTok(tok,fields){
+  let best=0;
+  for(const f of fields){
+    let s=0; const p=f.n.indexOf(tok);
+    if(p>=0) s=(p===0?12:10)*f.w + (tok.length===f.n.length?6:0);
+    else if(tok.length>=2&&subseq(tok,f.n)) s=4*f.w;
+    else if(/^[a-z0-9؀-ۿ]{4,}$/.test(tok)){
+      const max=tok.length>=7?2:1;
+      for(const w of f.words){ const cut=w.slice(0,tok.length+max); if(lev(tok,w,max)<=max||lev(tok,cut,max)<=max){s=6*f.w;break;} }
+    }
+    if(s>best) best=s;
+  }
+  return best;
+}
+function search(q){
+  const toks=String(q).split(/\s+/).map(norm).filter(Boolean);
+  const pool=INDEX.filter(x=>(!S.cat||x.cat.k===S.cat)&&(!S.use||useKey(x.it)===S.use)&&(!S.ship||x.it.ship===S.ship));
+  if(!toks.length) return {rows:pool.map(x=>x.it),fuzzy:false};
+  const and=[],or=[];
+  for(const x of pool){
+    const sc=toks.map(tk=>scoreTok(tk,x.fields)); const sum=sc.reduce((a,b)=>a+b,0);
+    if(sc.every(v=>v>0)) and.push([sum,x.it]); else if(sum>0) or.push([sum,x.it]);
+  }
+  const by=(a,b)=>b[0]-a[0];
+  if(and.length) return {rows:and.sort(by).map(x=>x[1]),fuzzy:false};
+  return {rows:or.sort(by).slice(0,30).map(x=>x[1]),fuzzy:or.length>0};
+}
+function hl(text,q){
+  text=String(text||""); const toks=String(q).split(/\s+/).filter(x=>x.length>=1);
+  let out=esc(text);
+  for(const tk of toks){ const re=new RegExp("("+tk.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","ig"); out=out.replace(re,"<mark>$1</mark>"); }
+  return out;
+}
+
+/* ---------- dates & status ---------- */
+const DAY=86400000;
+function todayISO(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function diffDays(iso){if(!iso)return null;const a=Date.parse(iso+"T00:00:00"),b=Date.parse(todayISO()+"T00:00:00");return Math.round((a-b)/DAY);}
+function fmtD(iso){if(!iso)return "";const [y,m,d]=iso.split("-");return lang==="en"?new Date(+y,m-1,+d).toLocaleDateString("en-GB",{day:"numeric",month:"short"}):lang==="ar"?d+"/"+m:(+m)+"月"+(+d)+"日";}
+function shipState(sh){
+  if(sh.status) return sh.status;
+  if(!sh.eta) return "pending";
+  return diffDays(sh.eta)>0?"sailed":"late";
+}
+function pill(sh){const k=shipState(sh);return `<span class="pill s-${STATUS_TONE[k]}">${esc(T[lang].st[k])}</span>`;}
+function countdown(sh){
+  const k=shipState(sh); if(["arrived","clearing","released","delivered"].includes(k)||!sh.eta) return "";
+  const d=diffDays(sh.eta); if(d>0) return `<span class="countdown num">${esc(t("daysLeft",{n:d}))}</span>`;
+  if(d===0) return `<span class="countdown">${esc(t("today0"))}</span>`;
+  return `<span class="c num">${esc(t("overdue",{n:-d}))}</span>`;
+}
+const img=p=>p?(blobUrls[p]||p):"";
+
+/* ---------- render ---------- */
+function renderStatic(){
+  document.documentElement.lang=lang==="zh"?"zh-CN":lang;
+  document.documentElement.dir=lang==="ar"?"rtl":"ltr";
+  $("#t-title").textContent=t("title"); $("#t-sub").textContent=t("sub"); $("#t-hint").textContent=t("hint");
+  $("#q").placeholder=t("ph"); $("#t-ships").textContent=t("ships"); $("#t-cats").textContent=t("cats"); $("#t-results").textContent=t("results");
+  $("#t-today").textContent=t("today")+" "+fmtD(todayISO()); $("#adminOpen").textContent=t("admin"); $("#qclear").textContent=t("clear");
+}
+function renderShips(){
+  const order=[...DATA.shipments].sort((a,b)=>(a.eta||"9999").localeCompare(b.eta||"9999"));
+  $("#ships").innerHTML=order.length?order.map(sh=>{
+    const n=DATA.items.filter(i=>i.ship===sh.id).length;
+    return `<button type="button" class="ship" data-ship="${esc(sh.id)}" aria-pressed="${S.ship===sh.id}">
+      <div class="row"><span class="cno">${esc(sh.container)}</span>${pill(sh)}</div>
+      <div class="row"><span class="eta num">${sh.eta?esc(fmtD(sh.eta)):esc(t("tbd"))}</span>${countdown(sh)}</div>
+      <div class="meta">${esc(t("eta"))} · ${esc(sh.size||"")} · ${n} ${esc(t("items"))}</div>
+      <div class="meta mono">${esc((sh.invoices||[]).join(" / "))}</div></button>`;}).join("")
+    :`<div class="empty-state" style="flex:1">${esc(ta("none"))}</div>`;
+}
+function renderCats(){
+  const pool=INDEX.filter(x=>!S.ship||x.it.ship===S.ship);
+  const m=new Map(); for(const x of pool){const c=x.cat;if(!m.has(c.k))m.set(c.k,{c,n:0});m.get(c.k).n++;}
+  let h=`<button type="button" class="cat" data-cat="" aria-pressed="${!S.cat}"><b>${esc(t("all"))}</b><span class="n num">${pool.length}</span></button>`;
+  for(const {c,n} of m.values()) h+=`<button type="button" class="cat" data-cat="${esc(c.k)}" aria-pressed="${S.cat===c.k}"><b>${esc(c.zh)}</b><small>${esc(useSummary(c.k,pool))}</small><span class="n num">${n}</span></button>`;
+  $("#cats").innerHTML=h;
+  // 子分类：用途说明（随当前分类/柜子变化）
+  const uses=new Map();
+  for(const x of pool) if(!S.cat||x.cat.k===S.cat){const k=useKey(x.it);if(!uses.has(k))uses.set(k,{raw:x.it.use,n:0});uses.get(k).n++;}
+  const arr=[...uses].sort((a,b)=>(a[0]==="__none")-(b[0]==="__none")||b[1].n-a[1].n);
+  $("#uses").innerHTML=arr.length?`<span class="chips-label">${esc(t("use"))}：</span><button type="button" class="chip" data-use="" aria-pressed="${!S.use}">${esc(t("all"))}</button>`+arr.map(([k,v])=>`<button type="button" class="chip" data-use="${esc(k)}" aria-pressed="${S.use===k}">${esc(useLabel(v.raw))} · ${v.n}</button>`).join(""):"";
+}
+function renderList(){
+  const {rows,fuzzy}=search(S.q);
+  $("#count").textContent=rows.length+" "+t("items");
+  const act=[];
+  if(S.ship) act.push(`<button type="button" class="chip" data-clear="ship">${esc(t("cont"))}: <span class="mono">${esc(S.ship)}</span> ×</button>`);
+  if(S.cat){const c=INDEX.find(x=>x.cat.k===S.cat)?.cat; if(c) act.push(`<button type="button" class="chip" data-clear="cat">${esc(c.zh)} ×</button>`);}
+  if(S.use){const x=INDEX.find(x=>useKey(x.it)===S.use);act.push(`<button type="button" class="chip" data-clear="use">${esc(t("use"))}: ${esc(x?useLabel(x.it.use):"")} ×</button>`);}
+  $("#active").innerHTML=act.join("");
+  if(!rows.length){$("#list").innerHTML=`<div class="empty-state">${esc(DATA.items.length?t("noRes"):ta("none"))}</div>`;return;}
+  $("#list").innerHTML=(fuzzy?`<div class="fuzzy-note">${esc(t("fuzzy"))}</div>`:"")+rows.map(it=>{
+    const sh=shipById(it.ship), nm=splitName(it.name);
+    const main=nm.zh||nm.en;
+    const sub=nm.zh?nm.en:"";
+    const ph=img(it.photo);
+    return `<button type="button" class="item" data-item="${esc(it.id)}">
+      ${ph?`<img class="thumb" src="${esc(ph)}" alt="" loading="lazy">`:`<span class="thumb empty">${esc(it.pkg).slice(0,6)}</span>`}
+      <span class="it-main"><span class="it-name">${hl(main,S.q)}</span>
+        <span class="it-sub">${hl(sub,S.q)}</span>
+        <span class="it-tags"><span class="mono">${hl(it.pkg,S.q)}</span><span class="num">${esc(fmtNum(it.qty))} ${esc(it.unit)}</span><span>${esc(catOf(it.cat).zh)}${it.use?" · "+esc(useLabel(it.use)):""}</span><span class="mono">${hl(it.ship,S.q)}</span></span></span>
+      <span class="it-eta"><span>${pill(sh)}</span><span class="d num">${sh.eta?esc(fmtD(sh.eta)):esc(t("tbd"))}</span>${countdown(sh)||`<span class="c">${esc(t("eta"))}</span>`}</span>
+    </button>`;}).join("");
+}
+function fmtNum(n){return typeof n==="number"?n.toLocaleString("en-US",{maximumFractionDigits:3}):String(n??"");}
+function useKey(it){return it.use?norm(it.use):"__none";}
+function useLabel(raw){return raw?bi(raw):"未填用途";}
+function useSummary(k,pool){const set=new Set();for(const x of pool)if(x.cat.k===k&&x.it.use)set.add(useLabel(x.it.use));const a=[...set];return a.length?a.slice(0,3).join("、")+(a.length>3?"…":""):"";}
+function render(){renderStatic();renderShips();renderCats();renderList();}
+
+/* ---------- detail sheet ---------- */
+function openItem(id){
+  const it=DATA.items.find(i=>i.id===id); if(!it) return; const sh=shipById(it.ship), nm=splitName(it.name), c=catOf(it.cat);
+  const rows=[["pkg",`<span class="mono">${esc(it.pkg)}</span>`],["cat",esc(c.zh)],["use",esc(bi(it.use))],["qty",esc(fmtNum(it.qty)+" "+it.unit)],["pkgs",esc(fmtNum(it.pkgs)+" "+bi(it.pkgType))],["detail",esc(it.detail)],["spec",esc(it.size)],["mat",esc(it.material)],["nw",it.nw!=null?esc(fmtNum(it.nw))+" kg":""],["gw",it.gw!=null?esc(fmtNum(it.gw))+" kg":""],["cbm",it.cbm!=null?esc(fmtNum(it.cbm))+" m³":""],
+   ["cont",`<span class="mono">${esc(sh.container||it.ship)}</span>`],["seal",`<span class="mono">${esc(sh.seal)}</span>`],["inv",`<span class="mono">${esc((sh.invoices||[]).join(" / "))}</span>`],["route",esc([sh.pol,sh.pod].filter(Boolean).join(" → "))],["vessel",esc(sh.vessel)],["note",esc(sh.note)]].filter(r=>r[1]&&r[1].replace(/<[^>]+>/g,"").trim());
+  const pics=[it.photo,...(it.loadPhotos||[])].filter(Boolean);
+  showLayer(`<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dlg-h">
+    <div class="sheet-h"><div><h3 id="dlg-h">${esc(nm.zh||nm.en)}</h3><div class="it-sub">${esc(nm.zh?nm.en:"")}</div></div><button type="button" class="x" data-close>${esc(t("close"))}</button></div>
+    <div class="hero-eta"><div><label>${esc(t("status"))}</label>${pill(sh)}</div><div><label>${esc(t("eta"))}</label><span class="v num">${sh.eta?esc(fmtD(sh.eta)):esc(t("tbd"))}</span> ${countdown(sh)}</div>
+      ${sh.etaFactory?`<div><label>${esc(t("etaF"))}</label><span class="v num">${esc(fmtD(sh.etaFactory))}</span></div>`:""}
+      ${sh.etd?`<div><label>${esc(t("etd"))}</label><span class="v num">${esc(fmtD(sh.etd))}</span></div>`:`<div><label>${esc(t("loaded"))}</label><span class="v num">${esc(fmtD(sh.loaded))}</span></div>`}</div>
+    ${pics.length?`<div class="photos" aria-label="${esc(t("photos"))}">${pics.map(p=>`<img src="${esc(img(p))}" alt="" loading="lazy">`).join("")}</div>`:""}
+    <dl class="kv">${rows.map(([k,v])=>`<dt>${esc(t(k))}</dt><dd>${v}</dd>`).join("")}</dl></div>`);
+}
+let lastFocus=null;
+function showLayer(html){lastFocus=document.activeElement;$("#layer").innerHTML=`<div class="overlay" data-close-bg>${html}</div>`;$("#layer .x")?.focus();}
+function closeLayer(){$("#layer").innerHTML="";lastFocus?.focus?.();}
+
+/* ---------- events ---------- */
+let qTimer;
+$("#q").addEventListener("input",e=>{clearTimeout(qTimer);qTimer=setTimeout(()=>{S.q=e.target.value.trim();$("#qclear").hidden=!S.q;renderList();},120);});
+$("#qclear").addEventListener("click",()=>{$("#q").value="";S.q="";$("#qclear").hidden=true;renderList();$("#q").focus();});
+document.addEventListener("click",e=>{
+  const s=e.target.closest("[data-ship]"); if(s&&!e.target.closest(".adm")){S.ship=S.ship===s.dataset.ship?"":s.dataset.ship;S.cat="";S.use="";render();return;}
+  const c=e.target.closest("[data-cat]"); if(c){S.cat=c.dataset.cat;S.use="";renderCats();renderList();return;}
+  const u=e.target.closest("[data-use]"); if(u){S.use=u.dataset.use&&S.use!==u.dataset.use?u.dataset.use:"";renderCats();renderList();return;}
+  const cl=e.target.closest("[data-clear]"); if(cl){S[cl.dataset.clear]="";if(cl.dataset.clear==="cat")S.use="";render();return;}
+  const it=e.target.closest("[data-item]"); if(it){openItem(it.dataset.item);return;}
+  if(e.target.closest("[data-close]")||e.target.matches("[data-close-bg]")){closeLayer();return;}
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#layer").innerHTML)closeLayer();});
+
+/* ---------- load ---------- */
+async function load(){
+  try{const r=await fetch("data.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw 0;DATA=await r.json();}
+  catch(e){DATA={shipments:[],items:[]};}
+  DATA.shipments=DATA.shipments||[];DATA.items=DATA.items||[];
+  buildIndex();render();
+}
+render();load();
+
+/* ================= admin ================= */
+/* 两种运行环境：Claude 页面（用平台保存），或 GitHub Pages 等普通网站（用 GitHub 令牌保存） */
+const GH_MODE=!window.claude?.use;
+(async()=>{
+  if(GH_MODE){$("#adminOpen").hidden=false;return;}
+  const user=await window.claude.use("user").catch(()=>null);
+  canWrite=!!(user&&await user.canEdit().catch(()=>false));
+  $("#adminOpen").hidden=!canWrite;
+})();
+$("#adminOpen").addEventListener("click",openGate);
+
+/* 管理员密码：只存哈希，本次打开页面内输入一次即可 */
+const ADMIN_HASH="222c5e926c0eea6e05edc07deeb84de0b7b6d4ba2274d88d24da33effbfec9d5";
+let unlocked=false;
+try{unlocked=sessionStorage.getItem("eta-admin")===ADMIN_HASH;}catch(e){}
+async function sha256(txt){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(txt));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("");}
+function openGate(){
+  if(unlocked){openAdmin();return;}
+  showLayer(`<div class="sheet adm" role="dialog" aria-modal="true" aria-labelledby="gate-h" style="max-width:420px">
+    <div class="sheet-h"><h3 id="gate-h">输入管理员密码</h3><button type="button" class="x" data-close>关闭</button></div>
+    <form id="gate" class="gate"><label for="pw">修改柜子与 ETA 前需要验证</label>
+      <input id="pw" type="password" autocomplete="current-password" required>
+      <div class="gate-err" id="pwErr" role="alert"></div>
+      <button type="submit" class="btn">进入管理</button></form></div>`);
+  const pw=$("#pw"); pw.focus();
+  $("#gate").addEventListener("submit",async e=>{e.preventDefault();
+    const h=await sha256(pw.value);
+    if(h===ADMIN_HASH){unlocked=true;try{sessionStorage.setItem("eta-admin",h)}catch(x){}openAdmin();}
+    else{$("#pwErr").textContent="密码不对，请重新输入。";pw.select();}});
+}
+
+function openAdmin(){
+  showLayer(`<div class="sheet adm" role="dialog" aria-modal="true" aria-labelledby="adm-h">
+    <div class="sheet-h"><h3 id="adm-h">${esc(ta("title"))}</h3><button type="button" class="x" data-close>${esc(t("close"))}</button></div>
+    <section><h4>${esc(ta("imp"))}</h4><p>${esc(ta("impP"))}</p>
+      <label class="drop" for="xfile">Excel (.xlsx)<input id="xfile" type="file" accept=".xlsx,.xlsm" multiple></label><div class="log" id="implog"></div></section>
+    ${GH_MODE?ghSection():""}
+    <section><h4>${esc(ta("ships"))}</h4><p>${esc(ta("shipsP"))}</p><div id="shipforms"></div></section>
+    <div class="savebar"><button type="button" class="btn" id="saveBtn">${esc(ta("save"))}</button><span id="saveMsg" class="it-sub"></span></div></div>`);
+  renderShipForms(); updateSaveMsg();
+  $("#xfile").addEventListener("change",e=>importFiles([...e.target.files]));
+  $("#saveBtn").addEventListener("click",save);
+  if(GH_MODE){const keep=()=>{GH.token=$("#ghToken").value.trim();GH.repo=$("#ghRepo").value.trim();try{if($("#ghKeep").checked){localStorage.setItem("eta-gh",JSON.stringify({token:GH.token,repo:GH.repo}));}else localStorage.removeItem("eta-gh");}catch(e){}};
+    ["ghToken","ghRepo","ghKeep"].forEach(i=>$("#"+i).addEventListener("change",keep));}
+}
+
+/* ---------- GitHub 保存 ---------- */
+const GH={token:"",repo:"",branch:"main"};
+(function(){
+  try{const v=JSON.parse(localStorage.getItem("eta-gh")||"null");if(v){GH.token=v.token||"";GH.repo=v.repo||"";}}catch(e){}
+  if(!GH.repo&&/\.github\.io$/i.test(location.hostname)){const owner=location.hostname.split(".")[0];const seg=location.pathname.split("/").filter(Boolean)[0];GH.repo=owner+"/"+(seg&&!/\.html?$/.test(seg)?seg:owner+".github.io");}
+})();
+function ghSection(){
+  let kept=false;try{kept=!!localStorage.getItem("eta-gh");}catch(e){}
+  return `<section><h4>GitHub 保存设置</h4><p>这个网站放在 GitHub 上，保存修改需要一个 GitHub 令牌（只给这个仓库的「Contents 读写」权限）。勾选「记住」后，这台设备以后不用再填。</p>
+    <div class="shipform" style="border:0;margin:0;padding:0">
+      <label for="ghRepo">仓库（用户名/仓库名）<input id="ghRepo" type="text" value="${esc(GH.repo)}" placeholder="Louislu1214/capucinosearch" autocomplete="off"></label>
+      <label for="ghToken">GitHub 令牌<input id="ghToken" type="password" value="${esc(GH.token)}" placeholder="github_pat_…" autocomplete="off"></label>
+      <label class="wide" for="ghKeep" style="flex-direction:row;align-items:center;gap:8px"><input id="ghKeep" type="checkbox" ${kept?"checked":""}> 在这台设备上记住</label>
+    </div></section>`;
+}
+function b64Text(str){const bytes=new TextEncoder().encode(str);let bin="";for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return btoa(bin);}
+function b64Blob(blob){return new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]);r.onerror=no;r.readAsDataURL(blob);});}
+async function ghCall(method,path,body){
+  const url=`https://api.github.com/repos/${GH.repo}/contents/${path.split("/").map(encodeURIComponent).join("/")}`+(method==="GET"?`?ref=${GH.branch}&t=${Date.now()}`:"");
+  const r=await fetch(url,{method,cache:"no-store",headers:{Authorization:"Bearer "+GH.token,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"},body:body?JSON.stringify(body):undefined});
+  if(method==="GET"&&r.status===404) return null;
+  if(!r.ok){const e=new Error(String(r.status));e.status=r.status;throw e;}
+  return r.json();
+}
+async function ghPut(path,b64,msg){
+  for(let tries=0;tries<2;tries++){
+    const cur=await ghCall("GET",path); const body={message:msg,content:b64,branch:GH.branch}; if(cur&&cur.sha)body.sha=cur.sha;
+    try{return await ghCall("PUT",path,body);}catch(e){if(e.status!==409&&e.status!==422||tries)throw e;}
+  }
+}
+async function ghSave(){
+  GH.token=($("#ghToken")?.value||GH.token).trim(); GH.repo=($("#ghRepo")?.value||GH.repo).trim();
+  const msgEl=$("#saveMsg"), b=$("#saveBtn");
+  if(!GH.token||!/^[\w.-]+\/[\w.-]+$/.test(GH.repo)){msgEl.textContent="请先填好仓库和 GitHub 令牌。";return;}
+  b.disabled=true; DATA.updated=new Date().toISOString().slice(0,10);
+  const paths=Object.keys(pendingFiles); let done=0;
+  try{
+    for(const p of paths){msgEl.textContent=`正在上传照片 ${++done}/${paths.length}…`;await ghPut(p,await b64Blob(pendingFiles[p]),"上传货物照片 "+p);delete pendingFiles[p];}
+    msgEl.textContent="正在保存数据…";
+    await ghPut("data.json",b64Text(JSON.stringify(DATA,null,1)),"更新到货数据 "+DATA.updated);
+    dirty=false;updateSaveMsg();toast("已保存到 GitHub，约 1–2 分钟后大家刷新就能看到。");
+  }catch(e){
+    const st=e&&e.status;
+    msgEl.textContent=st===401?"保存失败：GitHub 令牌无效或已过期，请换一个新令牌。":(st===403||st===404)?"保存失败：这个令牌没有该仓库的写入权限，或仓库名填错了。":"保存失败：网络或 GitHub 出错（"+(st||e.message||e)+"），请稍后再点一次。";
+    b.disabled=false;
+  }
+}
+function renderShipForms(){
+  const box=$("#shipforms"); if(!box) return;
+  if(!DATA.shipments.length){box.innerHTML=`<div class="empty-state">${esc(ta("none"))}</div>`;return;}
+  box.innerHTML=DATA.shipments.map((sh,i)=>{
+    const id=k=>`sf-${i}-${k}`;
+    return `<div class="shipform" data-sid="${esc(sh.id)}">
+      <div class="t"><b class="mono">${esc(sh.container)}</b><span class="it-sub mono">${esc((sh.invoices||[]).join(" / "))} · ${esc(t("loaded"))} ${esc(sh.loaded||"")}</span></div>
+      <label for="${id("eta")}">${esc(t("eta"))}<input id="${id("eta")}" type="date" data-f="eta" value="${esc(sh.eta)}"></label>
+      <label for="${id("etaF")}">${esc(t("etaF"))}<input id="${id("etaF")}" type="date" data-f="etaFactory" value="${esc(sh.etaFactory)}"></label>
+      <label for="${id("etd")}">${esc(t("etd"))}<input id="${id("etd")}" type="date" data-f="etd" value="${esc(sh.etd)}"></label>
+      <label for="${id("st")}">${esc(t("status"))}<select id="${id("st")}" data-f="status"><option value="">${esc(lang==="zh"?"自动（按 ETA）":"Auto (from ETA)")}</option>${STATUS_ORDER.map(k=>`<option value="${k}" ${sh.status===k?"selected":""}>${esc(T[lang].st[k])}</option>`).join("")}</select></label>
+      <label for="${id("v")}">${esc(t("vessel"))}<input id="${id("v")}" type="text" data-f="vessel" value="${esc(sh.vessel)}"></label>
+      <label for="${id("seal")}">${esc(t("seal"))}<input id="${id("seal")}" type="text" data-f="seal" value="${esc(sh.seal)}"></label>
+      <label for="${id("n")}" class="wide">${esc(t("note"))}<input id="${id("n")}" type="text" data-f="note" value="${esc(sh.note)}"></label>
+      <div class="wide"><button type="button" class="btn warn" data-del="${esc(sh.id)}">${esc(ta("del"))}</button></div></div>`;}).join("");
+  box.oninput=box.onchange=e=>{const f=e.target.dataset.f;if(!f)return;const sid=e.target.closest("[data-sid]").dataset.sid;const sh=shipById(sid);sh[f]=e.target.value;markDirty();};
+  box.onclick=e=>{const b=e.target.closest("[data-del]");if(!b)return;
+    if(b.dataset.armed!=="1"){b.dataset.armed="1";b.textContent=ta("delC");return;}
+    const sid=b.dataset.del;DATA.shipments=DATA.shipments.filter(s=>s.id!==sid);DATA.items=DATA.items.filter(i=>i.ship!==sid);if(S.ship===sid)S.ship="";markDirty();renderShipForms();};
+}
+function markDirty(){dirty=true;buildIndex();renderShips();renderCats();renderList();updateSaveMsg();}
+function updateSaveMsg(){const m=$("#saveMsg");if(!m)return;m.textContent=readOnly?ta("ro"):dirty?ta("unsaved"):"";const b=$("#saveBtn");if(b)b.disabled=readOnly||!dirty;}
+function toast(msg){const d=document.createElement("div");d.className="toast";d.setAttribute("role","status");d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),3200);}
+
+async function save(){
+  if(GH_MODE) return ghSave();
+  const art=await window.claude?.use?.("artifact").catch(()=>null);
+  if(!art){readOnly=true;updateSaveMsg();return;}
+  const b=$("#saveBtn"); b.disabled=true;
+  DATA.updated=new Date().toISOString().slice(0,10);
+  const files={"data.json":{content:JSON.stringify(DATA,null,1),contentType:"application/json"}};
+  for(const p in pendingFiles) files[p]={content:pendingFiles[p],contentType:"image/jpeg"};
+  try{await art.publish(files);for(const p in pendingFiles)delete pendingFiles[p];dirty=false;updateSaveMsg();toast(ta("saved"));}
+  catch(e){
+    const code=e&&e.code;
+    if(code==="not_writer"||code==="not_granted"||code==="not_declared"||code==="consent_required"){readOnly=true;updateSaveMsg();}
+    else if(code==="conflict"){/* view reloads to the newer version */}
+    else{$("#saveMsg").textContent=(lang==="zh"?"保存失败：":"Save failed: ")+(e&&e.message||code||"");b.disabled=false;}
+  }
+}
+
+/* ---------- Excel import ---------- */
+function loadScript(src){return new Promise((ok,no)=>{if(document.querySelector(`script[src="${src}"]`))return ok();const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s);});}
+async function libs(){
+  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");
+  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js");
+}
+function fnv(s){let h=0x811c9dc5;for(const b of new TextEncoder().encode(s)){h^=b;h=Math.imul(h,0x01000193)>>>0;}return h.toString(16).padStart(8,"0");}
+const COLS=[["pkgs",/包装数量|packagequantity|总件数/],["pkgType",/包装方式|packingtype/],["pkg",/包装编号|packingno/],["container",/柜号|container/],["detail",/配件明细|accessor/],["cat",/货物分类|category/],["use",/用途|instructions/],["size",/型号|规格|size/],["material",/材质|material/],["name",/货物名称|description/],["qty",/^数量|qty/],["unit",/单位|unit/],["L",/^长/],["W",/^宽/],["H",/^高/],["nw",/净重|nw/],["gw",/毛重|gw/],["tw",/总重量/],["cbm",/体积|cbm/],["photo",/货物图片|备注|picture|photo/],["lp",/装柜照片|loading/]];
+async function resizeJpeg(blob,maxw){
+  const bmp=await createImageBitmap(blob); const k=Math.min(1,maxw/Math.max(bmp.width,bmp.height));
+  const c=document.createElement("canvas");c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
+  const g=c.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,c.width,c.height);g.drawImage(bmp,0,0,c.width,c.height);
+  return await new Promise(r=>c.toBlob(r,"image/jpeg",.76));
+}
+async function importFiles(files){
+  const log=$("#implog"); log.textContent="…";
+  try{await libs();}catch(e){log.textContent=lang==="zh"?"无法加载 Excel 读取组件，请检查网络后重试。":"Could not load the Excel reader. Check the connection and try again.";return;}
+  const lines=[], newItems=[];
+  for(const f of files){
+    try{
+      const buf=await f.arrayBuffer();
+      const wb=XLSX.read(buf,{type:"array",cellFormula:true});
+      // invoice meta from any sheet
+      const meta={};
+      for(const sn of wb.SheetNames){const ws=wb.Sheets[sn];for(const a in ws){if(a[0]==="!")continue;const v=ws[a].v;if(typeof v!=="string")continue;
+        let m; if(!meta.inv&&(m=v.match(/INVOICE NO\.?\s*[:：]\s*(\S+)/i)))meta.inv=m[1];
+        if(!meta.date&&/date\s*[:：]/i.test(v)&&(m=v.match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/)))meta.date=`${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`;
+        if(!meta.route&&(m=v.match(/FROM:\s*(.+?)\s+TO\s+(.+)$/i)))meta.route=[m[1].trim(),m[2].trim()];
+        if(!meta.size&&(m=v.match(/TOTAL:\s*\d+\s*X\s*(\w+)/i)))meta.size=m[1];}}
+      // loading sheet + header
+      let ws=null,hr=-1,range;
+      const cand=[...wb.SheetNames].sort((a,b)=>(/loading|装柜/i.test(b)?1:0)-(/loading|装柜/i.test(a)?1:0));
+      outer: for(const sn of cand){const w=wb.Sheets[sn];if(!w["!ref"])continue;const rg=XLSX.utils.decode_range(w["!ref"]);
+        for(let r=rg.s.r;r<=Math.min(rg.e.r,rg.s.r+120);r++){let a=false,b=false;for(let c=rg.s.c;c<=rg.e.c;c++){const x=w[XLSX.utils.encode_cell({r,c})];const s=x?norm(x.v):"";if(/包装编号|packingno/.test(s))a=true;if(/货物名称|description/.test(s))b=true;}
+          if(a&&b){ws=w;hr=r;range=rg;break outer;}}}
+      if(!ws){lines.push(`${f.name}: ${lang==="zh"?"没找到 LOADING DETAILS 表头（需包含「包装编号」和「货物名称」）":"No LOADING DETAILS header found"}`);continue;}
+      const col={}; const lpCols=[];
+      for(let c=range.s.c;c<=range.e.c;c++){const x=ws[XLSX.utils.encode_cell({r:hr,c})];const s=x?norm(x.v):"";if(!s)continue;
+        for(const [k,re] of COLS){if(col[k]===undefined&&re.test(s)){col[k]=c;break;}}}
+      if(col.lp!==undefined){lpCols.push(col.lp);for(let c=col.lp+1;c<=range.e.c;c++){const x=ws[XLSX.utils.encode_cell({r:hr,c})];if(x&&String(x.v).trim())break;lpCols.push(c);}}
+      // merges
+      const merged={};for(const m of ws["!merges"]||[]){const top=ws[XLSX.utils.encode_cell(m.s)];for(let r=m.s.r;r<=m.e.r;r++)for(let c=m.s.c;c<=m.e.c;c++)merged[r+","+c]=top;}
+      const cell=(r,c)=>c===undefined?undefined:(ws[XLSX.utils.encode_cell({r,c})]||merged[r+","+c]);
+      const val=(r,c)=>{const x=cell(r,c);if(!x)return "";if(x.t==="e")return x.f?String(x.f):"";const v=x.v;return typeof v==="string"?v.trim():v;};
+      // WPS cell images
+      const imgMap={};let zip=null;
+      try{zip=await JSZip.loadAsync(buf);const ci=zip.file("xl/cellimages.xml"),rl=zip.file("xl/_rels/cellimages.xml.rels");
+        if(ci&&rl){const x=await ci.async("string"),rels=await rl.async("string");const rm={};for(const m of rels.matchAll(/Id="(rId\d+)"[^>]*Target="([^"]+)"/g))rm[m[1]]=m[2];
+          for(const m of x.matchAll(/name="(ID_[0-9A-Fa-f]+)"[\s\S]*?r:embed="(rId\d+)"/g)) if(rm[m[2]]) imgMap[m[1]]="xl/"+rm[m[2]].replace(/^\.?\//,"");}}catch(e){}
+      const grab=async(r,c,path,maxw)=>{const x=cell(r,c);const fm=x&&(x.f||(typeof x.v==="string"?x.v:""));const m=fm&&String(fm).match(/ID_[0-9A-Fa-f]+/);if(!m||!imgMap[m[0]]||!zip)return "";const zf=zip.file(imgMap[m[0]]);if(!zf)return "";
+        try{const b=await resizeJpeg(await zf.async("blob"),maxw);pendingFiles[path]=b;blobUrls[path]=URL.createObjectURL(b);return path;}catch(e){return "";}};
+      let cont="",seal="",n=0,a=0,u=0,p=0;
+      for(let r=hr+1;r<=range.e.r;r++){
+        const pkg=String(val(r,col.pkg)||""),name=String(val(r,col.name)||"");
+        if(!pkg&&!name)continue;
+        const cv=String(val(r,col.container)||"");const cm=cv.match(/[A-Z]{4}\s?\d{7}/);
+        if(cm){cont=cm[0].replace(/\s/g,"");const sm=cv.match(/封号\s*[:：]\s*(\S+)|seal\s*no\.?\s*[:：]\s*(\S+)/i);seal=sm?(sm[1]||sm[2]):seal;}
+        const ship=cont||("INV-"+(meta.inv||f.name));
+        let sh=shipById(ship);
+        if(!sh.id){sh={id:ship,container:ship,seal:seal||"",size:meta.size||"",invoices:[],pol:meta.route?.[0]||"",pod:meta.route?.[1]||"",loaded:meta.date||"",etd:"",eta:"",etaFactory:"",status:"",vessel:"",note:""};DATA.shipments.push(sh);}
+        if(seal&&!sh.seal)sh.seal=seal;
+        if(meta.inv&&!sh.invoices.includes(meta.inv))sh.invoices.push(meta.inv);
+        const id=ship+"|"+(pkg||name), h=fnv(id), num=x=>typeof x==="number"?x:(parseFloat(x)||null);
+        const L=num(val(r,col.L)),W=num(val(r,col.W)),H=num(val(r,col.H)),K=num(val(r,col.pkgs));
+        let cbm=num(val(r,col.cbm)); if(cbm==null&&L&&W&&H&&K)cbm=+(L*W*H/1e9*K).toFixed(3);
+        const old=DATA.items.find(i=>i.id===id);
+        const photo=(await grab(r,col.photo,`photos/${h}_p.jpg`,640))||old?.photo||"";
+        const lps=[];for(let j=0;j<lpCols.length;j++){const q=await grab(r,lpCols[j],`photos/${h}_L${j+1}.jpg`,900);if(q)lps.push(q);}
+        p+=(photo&&pendingFiles[photo]?1:0)+lps.length;
+        const it={id,ship,pkg:pkg||name,name,ar:old?.ar||"",detail:String(val(r,col.detail)||"").replace(/^=/,""),cat:String(val(r,col.cat)||""),use:String(val(r,col.use)||""),size:String(val(r,col.size)||""),material:String(val(r,col.material)||""),
+          qty:val(r,col.qty),unit:String(val(r,col.unit)||""),pkgs:K,pkgType:String(val(r,col.pkgType)||""),nw:num(val(r,col.nw)),gw:num(val(r,col.gw)),cbm:cbm!=null?+cbm.toFixed(3):null,photo,loadPhotos:lps.length?lps:(old?.loadPhotos||[]),src:f.name};
+        if(old){Object.assign(old,it);u++;}else{DATA.items.push(it);a++;}
+        if(!it.ar)newItems.push(old||it); n++;
+      }
+      lines.push(ta("imported",{f:f.name,n,a,u,p}));
+    }catch(e){lines.push(`${f.name}: ${e&&e.message||e}`);}
+    log.textContent=lines.join("\n");
+  }
+  markDirty(); renderShipForms();
+}
+})();
+</script>
+
+</body>
+</html>
