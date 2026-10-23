@@ -451,63 +451,31 @@ function openAdmin(){
     <div class="sheet-h"><h3 id="adm-h">${esc(ta("title"))}</h3><button type="button" class="x" data-close>${esc(t("close"))}</button></div>
     <section><h4>${esc(ta("imp"))}</h4><p>${esc(ta("impP"))}</p>
       <label class="drop" for="xfile">Excel (.xlsx)<input id="xfile" type="file" accept=".xlsx,.xlsm" multiple></label><div class="log" id="implog"></div></section>
-    ${GH_MODE?ghSection():""}
     <section><h4>${esc(ta("ships"))}</h4><p>${esc(ta("shipsP"))}</p><div id="shipforms"></div></section>
-    <div class="savebar"><button type="button" class="btn" id="saveBtn">${esc(ta("save"))}</button><span id="saveMsg" class="it-sub"></span></div></div>`);
+    <div class="savebar"><button type="button" class="btn" id="saveBtn">${GH_MODE?"保存并下载更新文件":esc(ta("save"))}</button><span id="saveMsg" class="it-sub"></span></div></div>`);
   renderShipForms(); updateSaveMsg();
   $("#xfile").addEventListener("change",e=>importFiles([...e.target.files]));
   $("#saveBtn").addEventListener("click",save);
-  if(GH_MODE){const keep=()=>{GH.token=$("#ghToken").value.trim();GH.repo=$("#ghRepo").value.trim();try{if($("#ghKeep").checked){localStorage.setItem("eta-gh",JSON.stringify({token:GH.token,repo:GH.repo}));}else localStorage.removeItem("eta-gh");}catch(e){}};
-    ["ghToken","ghRepo","ghKeep"].forEach(i=>$("#"+i).addEventListener("change",keep));}
 }
 
-/* ---------- GitHub 保存 ---------- */
-const GH={token:"",repo:"",branch:"main"};
-(function(){
-  try{const v=JSON.parse(localStorage.getItem("eta-gh")||"null");if(v){GH.token=v.token||"";GH.repo=v.repo||"";}}catch(e){}
-  if(!GH.repo&&/\.github\.io$/i.test(location.hostname)){const owner=location.hostname.split(".")[0];const seg=location.pathname.split("/").filter(Boolean)[0];GH.repo=owner+"/"+(seg&&!/\.html?$/.test(seg)?seg:owner+".github.io");}
-})();
-function ghSection(){
-  let kept=false;try{kept=!!localStorage.getItem("eta-gh");}catch(e){}
-  return `<section><h4>GitHub 保存设置</h4><p>这个网站放在 GitHub 上，保存修改需要一个 GitHub 令牌（只给这个仓库的「Contents 读写」权限）。勾选「记住」后，这台设备以后不用再填。</p>
-    <div class="shipform" style="border:0;margin:0;padding:0">
-      <label for="ghRepo">仓库（用户名/仓库名）<input id="ghRepo" type="text" value="${esc(GH.repo)}" placeholder="Louislu1214/capucinosearch" autocomplete="off"></label>
-      <label for="ghToken">GitHub 令牌<input id="ghToken" type="password" value="${esc(GH.token)}" placeholder="github_pat_…" autocomplete="off"></label>
-      <label class="wide" for="ghKeep" style="flex-direction:row;align-items:center;gap:8px"><input id="ghKeep" type="checkbox" ${kept?"checked":""}> 在这台设备上记住</label>
-    </div></section>`;
-}
-function b64Text(str){const bytes=new TextEncoder().encode(str);let bin="";for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return btoa(bin);}
-function b64Blob(blob){return new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]);r.onerror=no;r.readAsDataURL(blob);});}
-async function ghCall(method,path,body){
-  const url=`https://api.github.com/repos/${GH.repo}/contents/${path.split("/").map(encodeURIComponent).join("/")}`+(method==="GET"?`?ref=${GH.branch}&t=${Date.now()}`:"");
-  const r=await fetch(url,{method,cache:"no-store",headers:{Authorization:"Bearer "+GH.token,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"},body:body?JSON.stringify(body):undefined});
-  if(method==="GET"&&r.status===404) return null;
-  if(!r.ok){const e=new Error(String(r.status));e.status=r.status;throw e;}
-  return r.json();
-}
-async function ghPut(path,b64,msg){
-  for(let tries=0;tries<2;tries++){
-    const cur=await ghCall("GET",path); const body={message:msg,content:b64,branch:GH.branch}; if(cur&&cur.sha)body.sha=cur.sha;
-    try{return await ghCall("PUT",path,body);}catch(e){if(e.status!==409&&e.status!==422||tries)throw e;}
+/* ---------- GitHub 网站：不用令牌，导出更新文件后手动上传 ---------- */
+const GH_REPO=(()=>{if(/\.github\.io$/i.test(location.hostname)){const o=location.hostname.split(".")[0];const seg=location.pathname.split("/").filter(Boolean)[0];return o+"/"+(seg&&!/\.html?$/.test(seg)?seg:o+".github.io");}return "Louislu1214/capucinosearch";})();
+function dl(blob,name){const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);}
+async function ghExport(){
+  const msgEl=$("#saveMsg"); DATA.updated=new Date().toISOString().slice(0,10);
+  const json=new Blob([JSON.stringify(DATA,null,1)],{type:"application/json"});
+  const photos=Object.keys(pendingFiles);
+  if(!photos.length){dl(json,"data.json");}
+  else{
+    try{await libs();}catch(e){msgEl.textContent="无法加载打包组件，请检查网络后重试。";return;}
+    const z=new JSZip(); z.file("data.json",json); for(const p of photos) z.file(p,pendingFiles[p]);
+    dl(await z.generateAsync({type:"blob"}),"到货数据更新-"+DATA.updated+".zip");
   }
+  const up=`https://github.com/${GH_REPO}/upload/main`;
+  dirty=false; const b=$("#saveBtn"); if(b) b.disabled=true;
+  msgEl.innerHTML=`已下载更新文件。最后一步：打开 <a href="${up}" target="_blank" rel="noopener">GitHub 上传页面</a>，`+(photos.length?`把压缩包解压后的 <b>data.json</b> 和 <b>photos</b> 文件夹一起拖进去`:`把下载的 <b>data.json</b> 拖进去`)+`，点 Commit changes。约 1–2 分钟后大家刷新就能看到。`;
 }
-async function ghSave(){
-  GH.token=($("#ghToken")?.value||GH.token).trim(); GH.repo=($("#ghRepo")?.value||GH.repo).trim();
-  const msgEl=$("#saveMsg"), b=$("#saveBtn");
-  if(!GH.token||!/^[\w.-]+\/[\w.-]+$/.test(GH.repo)){msgEl.textContent="请先填好仓库和 GitHub 令牌。";return;}
-  b.disabled=true; DATA.updated=new Date().toISOString().slice(0,10);
-  const paths=Object.keys(pendingFiles); let done=0;
-  try{
-    for(const p of paths){msgEl.textContent=`正在上传照片 ${++done}/${paths.length}…`;await ghPut(p,await b64Blob(pendingFiles[p]),"上传货物照片 "+p);delete pendingFiles[p];}
-    msgEl.textContent="正在保存数据…";
-    await ghPut("data.json",b64Text(JSON.stringify(DATA,null,1)),"更新到货数据 "+DATA.updated);
-    dirty=false;updateSaveMsg();toast("已保存到 GitHub，约 1–2 分钟后大家刷新就能看到。");
-  }catch(e){
-    const st=e&&e.status;
-    msgEl.textContent=st===401?"保存失败：GitHub 令牌无效或已过期，请换一个新令牌。":(st===403||st===404)?"保存失败：这个令牌没有该仓库的写入权限，或仓库名填错了。":"保存失败：网络或 GitHub 出错（"+(st||e.message||e)+"），请稍后再点一次。";
-    b.disabled=false;
-  }
-}
+
 function renderShipForms(){
   const box=$("#shipforms"); if(!box) return;
   if(!DATA.shipments.length){box.innerHTML=`<div class="empty-state">${esc(ta("none"))}</div>`;return;}
@@ -533,7 +501,7 @@ function updateSaveMsg(){const m=$("#saveMsg");if(!m)return;m.textContent=readOn
 function toast(msg){const d=document.createElement("div");d.className="toast";d.setAttribute("role","status");d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),3200);}
 
 async function save(){
-  if(GH_MODE) return ghSave();
+  if(GH_MODE) return ghExport();
   const art=await window.claude?.use?.("artifact").catch(()=>null);
   if(!art){readOnly=true;updateSaveMsg();return;}
   const b=$("#saveBtn"); b.disabled=true;
