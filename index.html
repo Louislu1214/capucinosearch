@@ -189,7 +189,7 @@ const T={
   eta:"预计到港 ETA",etaF:"预计到厂",etd:"开船 ETD",loaded:"装柜日期",tbd:"待更新",daysLeft:"还有 {n} 天",today0:"今天到港",overdue:"已过 ETA {n} 天",clear:"清除",noRes:"没有找到相关货物，换个关键词试试。",fuzzy:"没有完全匹配的结果，以下是相近的货物：",
   pkg:"包装编号",cont:"柜号",seal:"封号",cat:"分类",use:"用途",spec:"型号/规格",mat:"材质",qty:"数量",pkgs:"件数",pkgType:"包装",detail:"明细",nw:"净重",gw:"毛重",cbm:"体积",inv:"发票",vessel:"船名/航次",note:"备注",route:"航线",status:"状态",photos:"货物与装柜照片",close:"关闭",admin:"管理",uncat:"未分类",
   st:{loaded:"已装柜",sailed:"在途",arrived:"已到港",clearing:"清关中",released:"已放行",delivered:"已到厂",pending:"ETA待更新",late:"已过ETA待确认"},
-  a:{title:"管理：导入清单与更新 ETA",imp:"导入装柜清单",impP:"选择国内发来的 Loading Detail Excel（可多选）。系统读取 LOADING DETAILS 表，按「柜号+包装编号」去重，同柜的多张发票会合并。",ships:"柜子与 ETA",shipsP:"车间看到的到货时间来自这里。ETA 按柜子填写，柜内所有货物共用。",save:"保存并发布",saved:"已保存，所有人刷新后看到最新数据",unsaved:"有未保存的修改",del:"删除此柜",delC:"再点一次确认删除",ro:"你只有查看权限，修改无法保存。",tr:"正在生成阿拉伯文名称…",none:"还没有柜子，先导入一份装柜清单。",imported:"导入 {f}：{n} 行，新增 {a}，更新 {u}，照片 {p} 张"}},
+  a:{title:"管理：导入清单与更新 ETA",imp:"导入装柜清单",impP:"选择国内发来的 Loading Detail Excel（可多选）。系统读取 LOADING DETAILS 表，按「柜号+包装编号」去重，同柜的多张发票会合并。",ships:"柜子与 ETA",shipsP:"以下全部选填。只导入清单不填也能直接保存，ETA 可以以后再补；ETA 按柜子填写，柜内所有货物共用。",save:"保存并发布",saved:"已保存，所有人刷新后看到最新数据",unsaved:"有未保存的修改",del:"删除此柜",delC:"再点一次确认删除",ro:"你只有查看权限，修改无法保存。",tr:"正在生成阿拉伯文名称…",none:"还没有柜子，先导入一份装柜清单。",imported:"导入 {f}：{n} 行，新增 {a}，更新 {u}，照片 {p} 张"}},
 };
 const STATUS_ORDER=["loaded","sailed","arrived","clearing","released","delivered"];
 const STATUS_TONE={loaded:"idle",sailed:"info",arrived:"warn",clearing:"warn",released:"ok",delivered:"ok",pending:"idle",late:"warn"};
@@ -370,7 +370,7 @@ function renderList(){
 }
 function fmtNum(n){return typeof n==="number"?n.toLocaleString("en-US",{maximumFractionDigits:3}):String(n??"");}
 function useKey(it){return it.use?norm(it.use):"__none";}
-function useLabel(raw){return raw?bi(raw):"未填用途";}
+function useLabel(raw){return raw?bi(raw):"其他";}
 function useSummary(k,pool){const set=new Set();for(const x of pool)if(x.cat.k===k&&x.it.use)set.add(useLabel(x.it.use));const a=[...set];return a.length?a.slice(0,3).join("、")+(a.length>3?"…":""):"";}
 function render(){renderStatic();renderShips();renderCats();renderList();}
 
@@ -426,13 +426,10 @@ const GH_MODE=!window.claude?.use;
 })();
 $("#adminOpen").addEventListener("click",openGate);
 
-/* 管理员密码：只存哈希，本次打开页面内输入一次即可 */
+/* 管理员密码：只存哈希，每次进入管理都要输入 */
 const ADMIN_HASH="222c5e926c0eea6e05edc07deeb84de0b7b6d4ba2274d88d24da33effbfec9d5";
-let unlocked=false;
-try{unlocked=sessionStorage.getItem("eta-admin")===ADMIN_HASH;}catch(e){}
 async function sha256(txt){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(txt));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("");}
 function openGate(){
-  if(unlocked){openAdmin();return;}
   showLayer(`<div class="sheet adm" role="dialog" aria-modal="true" aria-labelledby="gate-h" style="max-width:420px">
     <div class="sheet-h"><h3 id="gate-h">输入管理员密码</h3><button type="button" class="x" data-close>关闭</button></div>
     <form id="gate" class="gate"><label for="pw">修改柜子与 ETA 前需要验证</label>
@@ -442,7 +439,7 @@ function openGate(){
   const pw=$("#pw"); pw.focus();
   $("#gate").addEventListener("submit",async e=>{e.preventDefault();
     const h=await sha256(pw.value);
-    if(h===ADMIN_HASH){unlocked=true;try{sessionStorage.setItem("eta-admin",h)}catch(x){}openAdmin();}
+    if(h===ADMIN_HASH){openAdmin();}
     else{$("#pwErr").textContent="密码不对，请重新输入。";pw.select();}});
 }
 
@@ -593,7 +590,7 @@ async function importFiles(files){
       }
       lines.push(ta("imported",{f:f.name,n,a,u,p}));
     }catch(e){lines.push(`${f.name}: ${e&&e.message||e}`);}
-    log.textContent=lines.join("\n");
+    log.textContent=lines.join("\n")+"\n清单已读取，可以直接点下方按钮保存。";
   }
   markDirty(); renderShipForms();
 }
