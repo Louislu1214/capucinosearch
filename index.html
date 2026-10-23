@@ -68,7 +68,7 @@ main{display:flex;flex-direction:column;gap:22px;padding-block:18px 40px}
 .ships{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;scroll-snap-type:x proximity}
 .ship{flex:0 0 auto;min-width:250px;max-width:320px;scroll-snap-align:start;text-align:start;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;gap:6px}
 .ship[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
-.ship .cno{font-family:var(--f-mono);font-size:14px;font-weight:500}
+.ship .cno{font-family:var(--f-mono);font-size:15px;font-weight:600}
 .ship .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .ship .eta{font-family:var(--f-display);font-size:28px;font-weight:700;line-height:1}
 .ship .meta{font-size:12px;color:var(--muted)}
@@ -194,7 +194,7 @@ mark{background:color-mix(in srgb,var(--signal) 55%,transparent);color:inherit;b
 "use strict";
 /* ---------- i18n ---------- */
 const T={
- zh:{title:"金城卫浴到货查询",sub:"装柜清单 · 到货时间",hint:"可输入货物名称（中文或英文）、用途、包装编号、柜号，支持模糊和错字查找",ph:"搜索货物，例如：氧化锌、kaolin、FJS…",ships:"在途柜子",cats:"按分类查找",results:"货物",all:"全部",items:"项",today:"今天",
+ zh:{title:"金城卫浴到货查询",sub:"装柜清单 · 到货时间",hint:"可输入货物名称（中文或英文）、用途、包装编号、发票号，支持模糊和错字查找",ph:"搜索货物，例如：氧化锌、kaolin、FJS…",ships:"在途发票",cats:"按分类查找",results:"货物",all:"全部",items:"项",today:"今天",
   eta:"预计到港 ETA",etaF:"预计到厂",etd:"开船 ETD",loaded:"装柜日期",tbd:"待更新",daysLeft:"还有 {n} 天",today0:"今天到港",overdue:"已过 ETA {n} 天",clear:"清除",noRes:"没有找到相关货物，换个关键词试试。",fuzzy:"没有完全匹配的结果，以下是相近的货物：",
   pkg:"包装编号",cont:"柜号",seal:"封号",cat:"分类",use:"用途",spec:"型号/规格",mat:"材质",qty:"数量",pkgs:"件数",pkgType:"包装",detail:"明细",nw:"净重",gw:"毛重",cbm:"体积",inv:"发票",vessel:"船名/航次",note:"备注",route:"航线",status:"状态",photos:"货物与装柜照片",close:"关闭",admin:"管理",uncat:"未分类",
   st:{loaded:"已装柜",sailed:"在途",arrived:"已到港",clearing:"清关中",released:"已放行",delivered:"已到厂",pending:"ETA待更新",late:"已过ETA待确认"},
@@ -226,7 +226,7 @@ const SB_URL="https://inerayabqrryrsuezlik.supabase.co";
 const SB_KEY="sb_publishable_-oC_xU9Fds-Re64XJnBFFw_-gOwB6ph";
 const SB_LIB="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js";
 let sbClient=null, ADMIN_PW="", SRC="";
-const VER="v7 · 2026-10-23";
+const VER="v8 · 2026-10-23";
 async function sb(){
   if(sbClient) return sbClient;
   await loadScript(SB_LIB);
@@ -345,15 +345,15 @@ function renderStatic(){
   $("#q").placeholder=t("ph"); $("#t-ships").textContent=t("ships"); $("#t-cats").textContent=t("cats"); $("#t-results").textContent=t("results");
   $("#t-today").textContent=t("today")+" "+fmtD(todayISO()); $("#adminOpen").textContent=t("admin"); $("#qclear").textContent=t("clear");
 }
+function invLabel(sh){return (sh&&sh.invoices&&sh.invoices.length)?sh.invoices.join(" / "):"未读到发票号";}
 function renderShips(){
   const order=[...DATA.shipments].sort((a,b)=>(a.eta||"9999").localeCompare(b.eta||"9999"));
   $("#ships").innerHTML=order.length?order.map(sh=>{
     const n=DATA.items.filter(i=>i.ship===sh.id).length;
     return `<button type="button" class="ship" data-ship="${esc(sh.id)}" aria-pressed="${S.ship===sh.id}">
-      <div class="row"><span class="cno">${esc(sh.container)}</span>${pill(sh)}</div>
+      <div class="row"><span class="cno">${esc(invLabel(sh))}</span>${pill(sh)}</div>
       <div class="row"><span class="eta num">${sh.eta?esc(fmtD(sh.eta)):esc(t("tbd"))}</span>${countdown(sh)}</div>
-      <div class="meta">${esc(t("eta"))} · ${esc(sh.size||"")} · ${n} ${esc(t("items"))}</div>
-      <div class="meta mono">${esc((sh.invoices||[]).join(" / "))}</div></button>`;}).join("")
+      <div class="meta">${esc(t("eta"))} · ${n} ${esc(t("items"))}</div></button>`;}).join("")
     :`<div class="empty-state" style="flex:1">${esc(ta("none"))}</div>`;
 }
 function renderCats(){
@@ -372,7 +372,7 @@ function renderList(){
   const {rows,fuzzy}=search(S.q);
   $("#count").textContent=rows.length+" "+t("items");
   const act=[];
-  if(S.ship) act.push(`<button type="button" class="chip" data-clear="ship">${esc(t("cont"))}: <span class="mono">${esc(S.ship)}</span> ×</button>`);
+  if(S.ship) act.push(`<button type="button" class="chip" data-clear="ship">发票: <span class="mono">${esc(invLabel(shipById(S.ship)))}</span> ×</button>`);
   if(S.cat){const c=INDEX.find(x=>x.cat.k===S.cat)?.cat; if(c) act.push(`<button type="button" class="chip" data-clear="cat">${esc(c.zh)} ×</button>`);}
   if(S.use){const x=INDEX.find(x=>useKey(x.it)===S.use);act.push(`<button type="button" class="chip" data-clear="use">${esc(t("use"))}: ${esc(x?useLabel(x.it.use):"")} ×</button>`);}
   $("#active").innerHTML=act.join("");
@@ -386,7 +386,7 @@ function renderList(){
       ${ph?`<img class="thumb" src="${esc(ph)}" alt="" loading="lazy">`:`<span class="thumb empty">${esc(it.pkg).slice(0,6)}</span>`}
       <span class="it-main"><span class="it-name">${hl(main,S.q)}</span>
         <span class="it-sub">${hl(sub,S.q)}</span>
-        <span class="it-tags"><span class="mono">${hl(it.pkg,S.q)}</span><span class="num">${esc(fmtNum(it.qty))} ${esc(it.unit)}</span><span>${esc(catOf(it.cat).zh)}${it.use?" · "+esc(useLabel(it.use)):""}</span><span class="mono">${hl(it.ship,S.q)}</span></span></span>
+        <span class="it-tags"><span class="mono">${hl(it.pkg,S.q)}</span><span class="num">${esc(fmtNum(it.qty))} ${esc(it.unit)}</span><span>${esc(catOf(it.cat).zh)}${it.use?" · "+esc(useLabel(it.use)):""}</span><span class="mono">${hl(invLabel(sh),S.q)}</span></span></span>
       <span class="it-eta"><span>${pill(sh)}</span><span class="d num">${sh.eta?esc(fmtD(sh.eta)):esc(t("tbd"))}</span>${countdown(sh)||`<span class="c">${esc(t("eta"))}</span>`}</span>
     </button>`;}).join("");
 }
@@ -622,7 +622,7 @@ async function importFiles(files){
       let ws=null,hr=-1,range;
       const cand=[...wb.SheetNames].sort((a,b)=>(/loading|装柜/i.test(b)?1:0)-(/loading|装柜/i.test(a)?1:0));
       outer: for(const sn of cand){const w=wb.Sheets[sn];if(!w["!ref"])continue;const rg=XLSX.utils.decode_range(w["!ref"]);
-        for(let r=rg.s.r;r<=Math.min(rg.e.r,rg.s.r+120);r++){let a=false,b=false;for(let c=rg.s.c;c<=rg.e.c;c++){const x=w[XLSX.utils.encode_cell({r,c})];const s=x?norm(x.v):"";if(/包装编号|packingno/.test(s))a=true;if(/货物名称|description/.test(s))b=true;}
+        for(let r=rg.s.r;r<=Math.min(rg.e.r,rg.s.r+120);r++){let a=false,b=false;for(let c=rg.s.c;c<=rg.e.c;c++){const x=w[XLSX.utils.encode_cell({r,c})];const s=x?norm(x.v):"";if(/包装编号|packingno|箱号|装柜编号/.test(s))a=true;if(/货物名称|description/.test(s))b=true;}
           if(a&&b){ws=w;hr=r;range=rg;break outer;}}}
       if(!ws){lines.push(`${f.name}: ${lang==="zh"?"没找到 LOADING DETAILS 表头（需包含「包装编号」和「货物名称」）":"No LOADING DETAILS header found"}`);continue;}
       const col={}; const lpCols=[];
@@ -640,10 +640,14 @@ async function importFiles(files){
           for(const m of x.matchAll(/name="(ID_[0-9A-Fa-f]+)"[\s\S]*?r:embed="(rId\d+)"/g)) if(rm[m[2]]) imgMap[m[1]]="xl/"+rm[m[2]].replace(/^\.?\//,"");}}catch(e){}
       const grab=async(r,c,path,maxw)=>{const x=cell(r,c);const fm=x&&(x.f||(typeof x.v==="string"?x.v:""));const m=fm&&String(fm).match(/ID_[0-9A-Fa-f]+/);if(!m||!imgMap[m[0]]||!zip)return "";const zf=zip.file(imgMap[m[0]]);if(!zf)return "";
         try{const b=await resizeJpeg(await zf.async("blob"),maxw);pendingFiles[path]=b;blobUrls[path]=URL.createObjectURL(b);return path;}catch(e){return "";}};
-      let cont="",seal="",n=0,a=0,u=0,p=0; const touched=new Set();
+      let cont="",seal="",n=0,a=0,u=0,p=0,lastPkg="",subN=0; const touched=new Set();
       for(let r=hr+1;r<=range.e.r;r++){
-        const pkg=String(val(r,col.pkg)||""),name=String(val(r,col.name)||"");
+        let pkg=String(val(r,col.pkg)||""),name=String(val(r,col.name)||"");
+        const det=String(val(r,col.detail)||"");
+        if(!pkg&&!name&&det&&lastPkg){ subN++; pkg=lastPkg+"-"+subN; name=det; }   // 同一箱里的配件明细行
+        else if(pkg){ lastPkg=pkg; subN=0; }
         if(!pkg&&!name)continue;
+        if(/^(合计|小计|总计|total)/i.test(pkg+name))continue;
         const cv=String(val(r,col.container)||"");const cm=cv.match(/[A-Z]{4}\s?\d{7}/);
         if(cm){cont=cm[0].replace(/\s/g,"");const sm=cv.match(/封号\s*[:：]\s*(\S+)|seal\s*no\.?\s*[:：]\s*(\S+)/i);seal=sm?(sm[1]||sm[2]):seal;}
         const ship=cont||("INV-"+(meta.inv||f.name));
@@ -664,6 +668,7 @@ async function importFiles(files){
         if(!it.ar)newItems.push(old||it); n++;
       }
       for(const x of touched) if(!lastImported.includes(x)) lastImported.push(x);
+      if(!n) lines.push(`⚠ ${f.name}：没有读到任何货物行，请把这个文件发给技术人员检查格式。`);
       lines.push(ta("imported",{f:f.name,n,a,u,p})+(meta.inv?`（发票 ${meta.inv}）`:"（没读到发票号）"));
     }catch(e){lines.push(`${f.name}: ${e&&e.message||e}`);}
     log.textContent=lines.join("\n")+"\n清单已读取，可以直接点下方按钮保存。";
