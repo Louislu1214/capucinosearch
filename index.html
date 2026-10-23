@@ -226,7 +226,7 @@ const SB_URL="https://inerayabqrryrsuezlik.supabase.co";
 const SB_KEY="sb_publishable_-oC_xU9Fds-Re64XJnBFFw_-gOwB6ph";
 const SB_LIB="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js";
 let sbClient=null, ADMIN_PW="", SRC="";
-const VER="v6 · 2026-10-23";
+const VER="v7 · 2026-10-23";
 async function sb(){
   if(sbClient) return sbClient;
   await loadScript(SB_LIB);
@@ -496,14 +496,16 @@ function openAdmin(){
 }
 
 /* ---------- 保存到 Supabase 数据库 ---------- */
+function withTimeout(pr,ms,what){return Promise.race([pr,new Promise((_,no)=>setTimeout(()=>no(new Error(what+"超时，请检查网络后再点一次")),ms))]);}
 async function dbSave(){
-  const msgEl={set textContent(t){setSaveMsg(t);}}; setSaveBtns(true);
+  if(saving) return; saving=true;
+  const msgEl={set textContent(t){setSaveMsg(t);}}; setSaveBtns(true); msgEl.textContent="正在连接数据库…";
   try{
     const c=await sb(); const paths=Object.keys(pendingFiles); const map={}; let n=0;
     for(const p of paths){
       msgEl.textContent=`正在上传照片 ${++n}/${paths.length}…`;
       const name=p.replace(/^photos\//,"").replace(/\.jpg$/,"")+"-"+Date.now().toString(36)+".jpg";
-      const {error}=await c.storage.from("photos").upload(name,pendingFiles[p],{contentType:"image/jpeg",upsert:false});
+      const {error}=await withTimeout(c.storage.from("photos").upload(name,pendingFiles[p],{contentType:"image/jpeg",upsert:false}),45000,"照片上传");
       if(error) throw Object.assign(new Error(error.message),{kind:"photo"});
       map[p]=c.storage.from("photos").getPublicUrl(name).data.publicUrl;
     }
@@ -511,14 +513,14 @@ async function dbSave(){
     for(const p in map){ blobUrls[map[p]]=blobUrls[p]; delete pendingFiles[p]; }
     msgEl.textContent="正在保存数据…";
     DATA.updated=new Date().toISOString().slice(0,10);
-    const {error}=await c.rpc("save_data",{pw:ADMIN_PW,payload:DATA});
+    const {error}=await withTimeout(c.rpc("save_data",{pw:ADMIN_PW,payload:DATA}),45000,"保存数据");
     if(error) throw Object.assign(new Error(error.message),{code:error.code});
-    dirty=false; SRC="数据库"; renderFoot(); toast("已保存并上传，大家刷新页面就能看到。");
+    saving=false; dirty=false; SRC="数据库"; renderFoot(); toast("已保存并上传，大家刷新页面就能看到。");
     closeLayer(); showSaved();
   }catch(e){
     msgEl.textContent=(e.code==="28P01"||/密码错误/.test(e.message))?"保存失败：密码不对，请关闭管理后重新进入。"
       :e.kind==="photo"?"照片上传失败："+e.message:"保存失败："+(e.message||e)+"，请稍后再点一次。";
-    setSaveBtns(false);
+    saving=false; setSaveBtns(false);
   }
 }
 
@@ -566,7 +568,8 @@ function showSaved(){
 function markDirty(){dirty=true;buildIndex();renderShips();renderCats();renderList();updateSaveMsg();}
 function setSaveMsg(t){document.querySelectorAll(".savemsg").forEach(m=>m.textContent=t);}
 function setSaveBtns(dis){document.querySelectorAll("[data-save]").forEach(b=>b.disabled=dis);}
-function updateSaveMsg(){if(!$("#saveMsg"))return;setSaveMsg(readOnly?ta("ro"):dirty?ta("unsaved"):"");setSaveBtns(readOnly||!dirty);}
+let saving=false;
+function updateSaveMsg(){if(!$("#saveMsg"))return;if(saving)return;setSaveMsg(readOnly?ta("ro"):dirty?ta("unsaved"):"");setSaveBtns(readOnly);}
 function toast(msg){const d=document.createElement("div");d.className="toast";d.setAttribute("role","status");d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),3200);}
 
 async function save(){
