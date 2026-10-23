@@ -211,6 +211,18 @@ let lang="zh";
 let DATA={shipments:[],items:[]};
 const S={q:"",cat:"",use:"",ship:""};
 const blobUrls={};      // path -> objectURL for photos imported in this view
+/* 运行环境：普通网站（GitHub Pages）用 Supabase 数据库；Claude 页面用平台自带保存 */
+const GH_MODE=!window.claude?.use;
+const SB_URL="https://inerayabqrryrsuezlik.supabase.co";
+const SB_KEY="sb_publishable_-oC_xU9Fds-Re64XJnBFFw_-gOwB6ph";
+const SB_LIB="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js";
+let sbClient=null, ADMIN_PW="";
+async function sb(){
+  if(sbClient) return sbClient;
+  await loadScript(SB_LIB);
+  sbClient=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+  return sbClient;
+}
 const pendingFiles={};  // path -> Blob, waiting to be published
 let dirty=false, canWrite=false, readOnly=false;
 const $=s=>document.querySelector(s);
@@ -408,8 +420,16 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#layer").innerHT
 
 /* ---------- load ---------- */
 async function load(){
-  try{const r=await fetch("data.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw 0;DATA=await r.json();}
-  catch(e){DATA={shipments:[],items:[]};}
+  let ok=false;
+  if(GH_MODE){
+    try{const c=await sb();const {data,error}=await c.from("app_data").select("data,updated_at").eq("id",1).maybeSingle();
+      if(error) throw error; if(data&&data.data){DATA=data.data;ok=true;}}
+    catch(e){console.warn("数据库读取失败，改用备份文件",e);}
+  }
+  if(!ok){
+    try{const r=await fetch("data.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw 0;DATA=await r.json();}
+    catch(e){DATA={shipments:[],items:[]};}
+  }
   DATA.shipments=DATA.shipments||[];DATA.items=DATA.items||[];
   buildIndex();render();
 }
@@ -417,7 +437,6 @@ render();load();
 
 /* ================= admin ================= */
 /* 两种运行环境：Claude 页面（用平台保存），或 GitHub Pages 等普通网站（用 GitHub 令牌保存） */
-const GH_MODE=!window.claude?.use;
 (async()=>{
   if(GH_MODE){$("#adminOpen").hidden=false;return;}
   const user=await window.claude.use("user").catch(()=>null);
@@ -438,6 +457,15 @@ function openGate(){
       <button type="submit" class="btn">进入管理</button></form></div>`);
   const pw=$("#pw"); pw.focus();
   $("#gate").addEventListener("submit",async e=>{e.preventDefault();
+    const err=$("#pwErr"), btn=e.target.querySelector("button");
+    if(GH_MODE){
+      btn.disabled=true; err.textContent="正在验证…";
+      try{const c=await sb();const {data,error}=await c.rpc("check_pw",{pw:pw.value});if(error)throw error;
+        btn.disabled=false; err.textContent="";
+        if(data===true){ADMIN_PW=pw.value;openAdmin();return;}}
+      catch(x){btn.disabled=false;err.textContent="连接数据库失败，请检查网络后重试。（"+(x&&x.message||x)+"）";return;}
+      err.textContent="密码不对，请重新输入。";pw.select();return;
+    }
     const h=await sha256(pw.value);
     if(h===ADMIN_HASH){openAdmin();}
     else{$("#pwErr").textContent="密码不对，请重新输入。";pw.select();}});
@@ -449,28 +477,36 @@ function openAdmin(){
     <section><h4>${esc(ta("imp"))}</h4><p>${esc(ta("impP"))}</p>
       <label class="drop" for="xfile">Excel (.xlsx)<input id="xfile" type="file" accept=".xlsx,.xlsm" multiple></label><div class="log" id="implog"></div></section>
     <section><h4>${esc(ta("ships"))}</h4><p>${esc(ta("shipsP"))}</p><div id="shipforms"></div></section>
-    <div class="savebar"><button type="button" class="btn" id="saveBtn">${GH_MODE?"保存并下载更新文件":esc(ta("save"))}</button><span id="saveMsg" class="it-sub"></span></div></div>`);
+    <div class="savebar"><button type="button" class="btn" id="saveBtn">${esc(ta("save"))}</button><span id="saveMsg" class="it-sub"></span></div></div>`);
   renderShipForms(); updateSaveMsg();
   $("#xfile").addEventListener("change",e=>importFiles([...e.target.files]));
   $("#saveBtn").addEventListener("click",save);
 }
 
-/* ---------- GitHub 网站：不用令牌，导出更新文件后手动上传 ---------- */
-const GH_REPO=(()=>{if(/\.github\.io$/i.test(location.hostname)){const o=location.hostname.split(".")[0];const seg=location.pathname.split("/").filter(Boolean)[0];return o+"/"+(seg&&!/\.html?$/.test(seg)?seg:o+".github.io");}return "Louislu1214/capucinosearch";})();
-function dl(blob,name){const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);}
-async function ghExport(){
-  const msgEl=$("#saveMsg"); DATA.updated=new Date().toISOString().slice(0,10);
-  const json=new Blob([JSON.stringify(DATA,null,1)],{type:"application/json"});
-  const photos=Object.keys(pendingFiles);
-  if(!photos.length){dl(json,"data.json");}
-  else{
-    try{await libs();}catch(e){msgEl.textContent="无法加载打包组件，请检查网络后重试。";return;}
-    const z=new JSZip(); z.file("data.json",json); for(const p of photos) z.file(p,pendingFiles[p]);
-    dl(await z.generateAsync({type:"blob"}),"到货数据更新-"+DATA.updated+".zip");
+/* ---------- 保存到 Supabase 数据库 ---------- */
+async function dbSave(){
+  const msgEl=$("#saveMsg"), b=$("#saveBtn"); b.disabled=true;
+  try{
+    const c=await sb(); const paths=Object.keys(pendingFiles); const map={}; let n=0;
+    for(const p of paths){
+      msgEl.textContent=`正在上传照片 ${++n}/${paths.length}…`;
+      const name=p.replace(/^photos\//,"").replace(/\.jpg$/,"")+"-"+Date.now().toString(36)+".jpg";
+      const {error}=await c.storage.from("photos").upload(name,pendingFiles[p],{contentType:"image/jpeg",upsert:false});
+      if(error) throw Object.assign(new Error(error.message),{kind:"photo"});
+      map[p]=c.storage.from("photos").getPublicUrl(name).data.publicUrl;
+    }
+    for(const it of DATA.items){ if(map[it.photo]) it.photo=map[it.photo]; it.loadPhotos=(it.loadPhotos||[]).map(x=>map[x]||x); }
+    for(const p in map){ blobUrls[map[p]]=blobUrls[p]; delete pendingFiles[p]; }
+    msgEl.textContent="正在保存数据…";
+    DATA.updated=new Date().toISOString().slice(0,10);
+    const {error}=await c.rpc("save_data",{pw:ADMIN_PW,payload:DATA});
+    if(error) throw Object.assign(new Error(error.message),{code:error.code});
+    dirty=false; updateSaveMsg(); toast("已保存，大家刷新页面就能看到。");
+  }catch(e){
+    msgEl.textContent=(e.code==="28P01"||/密码错误/.test(e.message))?"保存失败：密码不对，请关闭管理后重新进入。"
+      :e.kind==="photo"?"照片上传失败："+e.message:"保存失败："+(e.message||e)+"，请稍后再点一次。";
+    b.disabled=false;
   }
-  const up=`https://github.com/${GH_REPO}/upload/main`;
-  dirty=false; const b=$("#saveBtn"); if(b) b.disabled=true;
-  msgEl.innerHTML=`已下载更新文件。最后一步：打开 <a href="${up}" target="_blank" rel="noopener">GitHub 上传页面</a>，`+(photos.length?`把压缩包解压后的 <b>data.json</b> 和 <b>photos</b> 文件夹一起拖进去`:`把下载的 <b>data.json</b> 拖进去`)+`，点 Commit changes。约 1–2 分钟后大家刷新就能看到。`;
 }
 
 function renderShipForms(){
@@ -498,7 +534,7 @@ function updateSaveMsg(){const m=$("#saveMsg");if(!m)return;m.textContent=readOn
 function toast(msg){const d=document.createElement("div");d.className="toast";d.setAttribute("role","status");d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),3200);}
 
 async function save(){
-  if(GH_MODE) return ghExport();
+  if(GH_MODE) return dbSave();
   const art=await window.claude?.use?.("artifact").catch(()=>null);
   if(!art){readOnly=true;updateSaveMsg();return;}
   const b=$("#saveBtn"); b.disabled=true;

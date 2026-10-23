@@ -7,17 +7,24 @@
 | 文件 | 作用 |
 |---|---|
 | `index.html` | 查询页面本身 |
-| `data.json` | 所有柜子和货物数据（ETA 也在这里） |
+| `data.json` | 备用数据（数据库连不上时才用） |
 | `photos/` | 从 Excel 里提取的货物照片和装柜照片 |
 | `robots.txt` | 让搜索引擎不收录这个网站 |
 
-## 日常更新（不用改代码，不用令牌）
+## 日## 数据存在哪里
+
+柜子、货物和 ETA 存在 Supabase 数据库（项目 inerayabqrryrsuezlik）的 `app_data` 表里，新导入的照片存在 Supabase Storage 的 `photos` 存储桶里。管理员密码只在数据库里核对，网页代码里没有密码原文。
+
+## 日常更新
 
 1. 打开网站，点右上角「管理」，输入管理员密码。
-2. 导入新的装柜清单 Excel，或修改柜子的 ETA、状态。
-3. 点「保存并下载更新文件」：
-   - 只改了 ETA / 状态：会下载一个 `data.json`
-   - 导入了带照片的新清单：会下载一个压缩包，先解压
-4. 打开仓库的上传页面（管理界面里有链接）：https://github.com/Louislu1214/capucinosearch/upload/main
-5. 把 `data.json`（以及解压出来的 `photos` 文件夹）拖进去，点 **Commit changes**。
-6. 约 1–2 分钟后，大家刷新页面就能看到更新。
+2. 导入新的装柜清单 Excel；ETA、状态等都是选填，可以以后再补。
+3. 点「保存并发布」。保存成功后，大家刷新页面就能看到。
+
+## 修改管理员密码
+
+在 Supabase 的 SQL Editor 里运行（把 新密码 换成你要的密码）：
+
+```sql
+update public.app_secret set pw_hash = extensions.crypt('新密码', extensions.gen_salt('bf')) where id = 1;
+```
