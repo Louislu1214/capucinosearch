@@ -11,7 +11,7 @@
 | `photos/` | 从 Excel 里提取的货物照片和装柜照片 |
 | `robots.txt` | 让搜索引擎不收录这个网站 |
 
-## 日## 数据存在哪里
+## 数据存在哪里
 
 柜子、货物和 ETA 存在 Supabase 数据库（项目 inerayabqrryrsuezlik）的 `app_data` 表里，新导入的照片存在 Supabase Storage 的 `photos` 存储桶里。管理员密码只在数据库里核对，网页代码里没有密码原文。
 

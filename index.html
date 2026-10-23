@@ -153,6 +153,7 @@ mark{background:color-mix(in srgb,var(--signal) 55%,transparent);color:inherit;b
 .gate-err{color:var(--bad);font-size:13px;min-height:1em}
 .log{font-size:13px;white-space:pre-line;color:var(--muted);margin-top:8px}
 .savebar{position:sticky;bottom:0;background:var(--bg);padding-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.foot{color:var(--muted);font-size:12px;padding-block:0 28px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:40;font-size:14px;max-width:90vw}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(16px);opacity:.6}}}
 </style>
@@ -178,6 +179,7 @@ mark{background:color-mix(in srgb,var(--signal) 55%,transparent);color:inherit;b
   <section><div class="sec-h"><h2 id="t-cats"></h2></div><div class="cats" id="cats"></div><div class="chips" id="uses" aria-label="用途说明"></div></section>
   <section><div class="sec-h"><h2 id="t-results"></h2><span id="count" class="num"></span></div><div class="active" id="active"></div><div class="list" id="list" style="margin-top:10px"></div></section>
 </main>
+<footer class="wrap foot" id="foot"></footer>
 <div id="layer"></div>
 
 <script>
@@ -216,7 +218,8 @@ const GH_MODE=!window.claude?.use;
 const SB_URL="https://inerayabqrryrsuezlik.supabase.co";
 const SB_KEY="sb_publishable_-oC_xU9Fds-Re64XJnBFFw_-gOwB6ph";
 const SB_LIB="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js";
-let sbClient=null, ADMIN_PW="";
+let sbClient=null, ADMIN_PW="", SRC="";
+const VER="v5 · 2026-10-23";
 async function sb(){
   if(sbClient) return sbClient;
   await loadScript(SB_LIB);
@@ -384,7 +387,8 @@ function fmtNum(n){return typeof n==="number"?n.toLocaleString("en-US",{maximumF
 function useKey(it){return it.use?norm(it.use):"__none";}
 function useLabel(raw){return raw?bi(raw):"其他";}
 function useSummary(k,pool){const set=new Set();for(const x of pool)if(x.cat.k===k&&x.it.use)set.add(useLabel(x.it.use));const a=[...set];return a.length?a.slice(0,3).join("、")+(a.length>3?"…":""):"";}
-function render(){renderStatic();renderShips();renderCats();renderList();}
+function renderFoot(){const f=$("#foot");if(f)f.textContent=`版本 ${VER} · 数据来源：${SRC||"加载中"} · 数据更新于 ${DATA.updated||"-"}`;}
+function render(){renderFoot();renderStatic();renderShips();renderCats();renderList();}
 
 /* ---------- detail sheet ---------- */
 function openItem(id){
@@ -430,6 +434,7 @@ async function load(){
     try{const r=await fetch("data.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw 0;DATA=await r.json();}
     catch(e){DATA={shipments:[],items:[]};}
   }
+  SRC=ok?"数据库":(GH_MODE?"备用文件（数据库暂无数据或连不上）":"页面数据");
   DATA.shipments=DATA.shipments||[];DATA.items=DATA.items||[];
   buildIndex();render();
 }
@@ -501,7 +506,8 @@ async function dbSave(){
     DATA.updated=new Date().toISOString().slice(0,10);
     const {error}=await c.rpc("save_data",{pw:ADMIN_PW,payload:DATA});
     if(error) throw Object.assign(new Error(error.message),{code:error.code});
-    dirty=false; updateSaveMsg(); toast("已保存，大家刷新页面就能看到。");
+    dirty=false; SRC="数据库"; renderFoot(); updateSaveMsg(); toast("已保存，大家刷新页面就能看到。");
+    msgEl.textContent="已保存到数据库 "+new Date().toLocaleTimeString("zh-CN");
   }catch(e){
     msgEl.textContent=(e.code==="28P01"||/密码错误/.test(e.message))?"保存失败：密码不对，请关闭管理后重新进入。"
       :e.kind==="photo"?"照片上传失败："+e.message:"保存失败："+(e.message||e)+"，请稍后再点一次。";
@@ -624,7 +630,7 @@ async function importFiles(files){
         if(old){Object.assign(old,it);u++;}else{DATA.items.push(it);a++;}
         if(!it.ar)newItems.push(old||it); n++;
       }
-      lines.push(ta("imported",{f:f.name,n,a,u,p}));
+      lines.push(ta("imported",{f:f.name,n,a,u,p})+(meta.inv?`（发票 ${meta.inv}）`:"（没读到发票号）"));
     }catch(e){lines.push(`${f.name}: ${e&&e.message||e}`);}
     log.textContent=lines.join("\n")+"\n清单已读取，可以直接点下方按钮保存。";
   }
