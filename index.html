@@ -226,7 +226,7 @@ const SB_URL="https://inerayabqrryrsuezlik.supabase.co";
 const SB_KEY="sb_publishable_-oC_xU9Fds-Re64XJnBFFw_-gOwB6ph";
 const SB_LIB="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js";
 let sbClient=null, ADMIN_PW="", SRC="";
-const VER="v8 · 2026-10-23";
+const VER="v9 · 2026-10-24";
 async function sb(){
   if(sbClient) return sbClient;
   await loadScript(SB_LIB);
@@ -254,7 +254,7 @@ function splitName(raw){
 function bi(raw){const s=splitName(raw);return lang==="zh"?(s.zh||s.en):(s.en||s.zh);}
 function catOf(raw){
   const n=norm(raw);
-  if(!n) return {k:"none",zh:T.zh.uncat,en:T.en.uncat,ar:T.ar.uncat};
+  if(!n) return {k:"none",zh:"其他",en:"Others",ar:""};
   for(const c of CATS) if(c.kw.some(k=>n.includes(norm(k)))) return c;
   const s=splitName(raw); return {k:"x:"+n,zh:s.zh||s.en,en:s.en||s.zh,ar:s.en||s.zh};
 }
@@ -300,7 +300,7 @@ function scoreTok(tok,fields){
 }
 function search(q){
   const toks=String(q).split(/\s+/).map(norm).filter(Boolean);
-  const pool=INDEX.filter(x=>(!S.cat||x.cat.k===S.cat)&&(!S.use||useKey(x.it)===S.use)&&(!S.ship||x.it.ship===S.ship));
+  const pool=INDEX.filter(x=>(!S.cat||x.cat.k===S.cat)&&(!S.use||useKey(x.it)===S.use)&&inSel(x.it.ship));
   if(!toks.length) return {rows:pool.map(x=>x.it),fuzzy:false};
   const and=[],or=[];
   for(const x of pool){
@@ -328,7 +328,7 @@ function shipState(sh){
   if(!sh.eta) return "pending";
   return diffDays(sh.eta)>0?"sailed":"late";
 }
-function pill(sh){const k=shipState(sh);return `<span class="pill s-${STATUS_TONE[k]}">${esc(T[lang].st[k])}</span>`;}
+function pill(sh){const k=shipState(sh);return `<span class="pill s-${STATUS_TONE[k]}">${esc(T.zh.st[k])}</span>`;}
 function countdown(sh){
   const k=shipState(sh); if(["arrived","clearing","released","delivered"].includes(k)||!sh.eta) return "";
   const d=diffDays(sh.eta); if(d>0) return `<span class="countdown num">${esc(t("daysLeft",{n:d}))}</span>`;
@@ -346,18 +346,26 @@ function renderStatic(){
   $("#t-today").textContent=t("today")+" "+fmtD(todayISO()); $("#adminOpen").textContent=t("admin"); $("#qclear").textContent=t("clear");
 }
 function invLabel(sh){return (sh&&sh.invoices&&sh.invoices.length)?sh.invoices.join(" / "):"未读到发票号";}
+function groups(ids){
+  const m=new Map(); const list=ids?ids.map(shipById).filter(x=>x.id):DATA.shipments;
+  for(const sh of list){const k=invLabel(sh); if(!m.has(k)) m.set(k,{key:k,ships:[]}); m.get(k).ships.push(sh);}
+  return [...m.values()];
+}
+function gv(g,f){const v=g.ships.map(x=>x[f]).filter(Boolean).sort();return v[0]||"";}
+function gproxy(g){return {eta:gv(g,"eta"),status:gv(g,"status"),etaFactory:gv(g,"etaFactory"),etd:gv(g,"etd"),loaded:gv(g,"loaded")};}
+function inSel(shipId){return !S.ship||invLabel(shipById(shipId))===S.ship;}
 function renderShips(){
-  const order=[...DATA.shipments].sort((a,b)=>(a.eta||"9999").localeCompare(b.eta||"9999"));
-  $("#ships").innerHTML=order.length?order.map(sh=>{
-    const n=DATA.items.filter(i=>i.ship===sh.id).length;
-    return `<button type="button" class="ship" data-ship="${esc(sh.id)}" aria-pressed="${S.ship===sh.id}">
-      <div class="row"><span class="cno">${esc(invLabel(sh))}</span>${pill(sh)}</div>
-      <div class="row"><span class="eta num">${sh.eta?esc(fmtD(sh.eta)):esc(t("tbd"))}</span>${countdown(sh)}</div>
+  const gs=groups().sort((a,b)=>(gv(a,"eta")||"9999").localeCompare(gv(b,"eta")||"9999"));
+  $("#ships").innerHTML=gs.length?gs.map(g=>{
+    const ids=new Set(g.ships.map(x=>x.id)); const n=DATA.items.filter(i=>ids.has(i.ship)).length; const px=gproxy(g);
+    return `<button type="button" class="ship" data-ship="${esc(g.key)}" aria-pressed="${S.ship===g.key}">
+      <div class="row"><span class="cno">${esc(g.key)}</span>${pill(px)}</div>
+      <div class="row"><span class="eta num">${px.eta?esc(fmtD(px.eta)):esc(t("tbd"))}</span>${countdown(px)}</div>
       <div class="meta">${esc(t("eta"))} · ${n} ${esc(t("items"))}</div></button>`;}).join("")
     :`<div class="empty-state" style="flex:1">${esc(ta("none"))}</div>`;
 }
 function renderCats(){
-  const pool=INDEX.filter(x=>!S.ship||x.it.ship===S.ship);
+  const pool=INDEX.filter(x=>inSel(x.it.ship));
   const m=new Map(); for(const x of pool){const c=x.cat;if(!m.has(c.k))m.set(c.k,{c,n:0});m.get(c.k).n++;}
   let h=`<button type="button" class="cat" data-cat="" aria-pressed="${!S.cat}"><b>${esc(t("all"))}</b><span class="n num">${pool.length}</span></button>`;
   for(const {c,n} of m.values()) h+=`<button type="button" class="cat" data-cat="${esc(c.k)}" aria-pressed="${S.cat===c.k}"><b>${esc(c.zh)}</b><small>${esc(useSummary(c.k,pool))}</small><span class="n num">${n}</span></button>`;
@@ -372,13 +380,13 @@ function renderList(){
   const {rows,fuzzy}=search(S.q);
   $("#count").textContent=rows.length+" "+t("items");
   const act=[];
-  if(S.ship) act.push(`<button type="button" class="chip" data-clear="ship">发票: <span class="mono">${esc(invLabel(shipById(S.ship)))}</span> ×</button>`);
+  if(S.ship) act.push(`<button type="button" class="chip" data-clear="ship">发票: <span class="mono">${esc(S.ship)}</span> ×</button>`);
   if(S.cat){const c=INDEX.find(x=>x.cat.k===S.cat)?.cat; if(c) act.push(`<button type="button" class="chip" data-clear="cat">${esc(c.zh)} ×</button>`);}
   if(S.use){const x=INDEX.find(x=>useKey(x.it)===S.use);act.push(`<button type="button" class="chip" data-clear="use">${esc(t("use"))}: ${esc(x?useLabel(x.it.use):"")} ×</button>`);}
   $("#active").innerHTML=act.join("");
   if(!rows.length){$("#list").innerHTML=`<div class="empty-state">${esc(DATA.items.length?t("noRes"):ta("none"))}</div>`;return;}
   $("#list").innerHTML=(fuzzy?`<div class="fuzzy-note">${esc(t("fuzzy"))}</div>`:"")+rows.map(it=>{
-    const sh=shipById(it.ship), nm=splitName(it.name);
+    const sh0=shipById(it.ship), sh=Object.assign({},sh0,gproxy(groups().find(g=>g.key===invLabel(sh0))||{ships:[sh0]})), nm=splitName(it.name);
     const main=nm.zh||nm.en;
     const sub=nm.zh?nm.en:"";
     const ph=img(it.photo);
@@ -526,43 +534,48 @@ async function dbSave(){
 
 function renderShipForms(){
   const box=$("#shipforms"); if(!box) return;
-  if(!DATA.shipments.length){box.innerHTML=`<div class="empty-state">${esc(ta("none"))}</div>`;return;}
-  box.innerHTML=[...DATA.shipments].reverse().map(sh=>{
-    const i=DATA.shipments.indexOf(sh), id=k=>`sf-${i}-${k}`;
-    const its=DATA.items.filter(x=>x.ship===sh.id), names=its.slice(0,4).map(x=>splitName(x.name).zh||splitName(x.name).en).join("、")+(its.length>4?"…":"");
-    return `<div class="shipform" data-sid="${esc(sh.id)}">
-      <div class="t"><b>${esc(ticketName(sh))}</b><span class="it-sub">${its.length} 件货${sh.loaded?" · 装柜 "+esc(sh.loaded):""}</span></div>
+  const gs=groups().reverse();
+  if(!gs.length){box.innerHTML=`<div class="empty-state">${esc(ta("none"))}</div>`;return;}
+  box.innerHTML=gs.map((g,i)=>{
+    const id=k=>`sf-${i}-${k}`, px=gproxy(g), ids=new Set(g.ships.map(x=>x.id));
+    const its=DATA.items.filter(x=>ids.has(x.ship)), names=its.slice(0,4).map(x=>splitName(x.name).zh||splitName(x.name).en).join("、")+(its.length>4?"…":"");
+    return `<div class="shipform" data-grp="${esc(g.key)}">
+      <div class="t"><b>发票 ${esc(g.key)}</b><span class="it-sub">${its.length} 件货${px.loaded?" · 装柜 "+esc(px.loaded):""}</span></div>
       <div class="wide it-sub">${esc(names)}</div>
-      <label for="${id("eta")}">${esc(t("eta"))}<input id="${id("eta")}" type="date" data-f="eta" value="${esc(sh.eta)}"></label>
+      <label for="${id("eta")}">${esc(t("eta"))}<input id="${id("eta")}" type="date" data-f="eta" value="${esc(px.eta)}"></label>
       <details class="wide more"><summary>更多选填项</summary><div class="shipform" style="border:0;margin:8px 0 0;padding:0">
-      <label for="${id("etaF")}">${esc(t("etaF"))}<input id="${id("etaF")}" type="date" data-f="etaFactory" value="${esc(sh.etaFactory)}"></label>
-      <label for="${id("etd")}">${esc(t("etd"))}<input id="${id("etd")}" type="date" data-f="etd" value="${esc(sh.etd)}"></label>
-      <label for="${id("st")}">${esc(t("status"))}<select id="${id("st")}" data-f="status"><option value="">自动（按 ETA）</option>${STATUS_ORDER.map(k=>`<option value="${k}" ${sh.status===k?"selected":""}>${esc(T.zh.st[k])}</option>`).join("")}</select></label>
-      <label for="${id("v")}">${esc(t("vessel"))}<input id="${id("v")}" type="text" data-f="vessel" value="${esc(sh.vessel)}"></label>
-      <label for="${id("n")}" class="wide">${esc(t("note"))}<input id="${id("n")}" type="text" data-f="note" value="${esc(sh.note)}"></label>
-      <div class="wide"><button type="button" class="btn warn" data-del="${esc(sh.id)}">删除这一票</button></div></div></details></div>`;}).join("");
-  box.oninput=box.onchange=e=>{const f=e.target.dataset.f;if(!f)return;const sid=e.target.closest("[data-sid]").dataset.sid;const sh=shipById(sid);sh[f]=e.target.value;const tw=document.querySelector(`#impResult [data-sid="${CSS.escape(sid)}"] [data-f="${f}"]`);if(tw)tw.value=e.target.value;markDirty();};
+      <label for="${id("etaF")}">${esc(t("etaF"))}<input id="${id("etaF")}" type="date" data-f="etaFactory" value="${esc(px.etaFactory)}"></label>
+      <label for="${id("etd")}">${esc(t("etd"))}<input id="${id("etd")}" type="date" data-f="etd" value="${esc(px.etd)}"></label>
+      <label for="${id("st")}">${esc(t("status"))}<select id="${id("st")}" data-f="status"><option value="">自动（按 ETA）</option>${STATUS_ORDER.map(k=>`<option value="${k}" ${px.status===k?"selected":""}>${esc(T.zh.st[k])}</option>`).join("")}</select></label>
+      <div class="wide"><button type="button" class="btn warn" data-del="${esc(g.key)}">删除这一票</button></div></div></details></div>`;}).join("");
+  box.oninput=box.onchange=onGrpInput;
   box.onclick=e=>{const b=e.target.closest("[data-del]");if(!b)return;
     if(b.dataset.armed!=="1"){b.dataset.armed="1";b.textContent="再点一次确认删除这一票";return;}
-    const sid=b.dataset.del;DATA.shipments=DATA.shipments.filter(s=>s.id!==sid);DATA.items=DATA.items.filter(i=>i.ship!==sid);if(S.ship===sid)S.ship="";markDirty();renderShipForms();};
+    const key=b.dataset.del;const ids=new Set(DATA.shipments.filter(x=>invLabel(x)===key).map(x=>x.id));
+    DATA.shipments=DATA.shipments.filter(x=>!ids.has(x.id));DATA.items=DATA.items.filter(i=>!ids.has(i.ship));if(S.ship===key)S.ship="";markDirty();renderShipForms();renderImportResult();};
+}
+function onGrpInput(e){
+  const f=e.target.dataset.f; if(!f) return; const key=e.target.closest("[data-grp]").dataset.grp;
+  for(const sh of DATA.shipments) if(invLabel(sh)===key) sh[f]=e.target.value;
+  document.querySelectorAll(`[data-grp="${CSS.escape(key)}"] [data-f="${f}"]`).forEach(x=>{if(x!==e.target)x.value=e.target.value;});
+  markDirty();
 }
 function ticketName(sh){return (sh.invoices&&sh.invoices.length)?"发票 "+sh.invoices.join(" / "):"未读到发票号";}
 let lastImported=[];
 function renderImportResult(){
   const box=$("#impResult"); if(!box) return;
-  const ships=lastImported.map(shipById).filter(x=>x.id);
-  if(!ships.length){box.innerHTML="";return;}
-  box.innerHTML=`<div class="imp-ok">${ships.map(sh=>{const n=DATA.items.filter(x=>x.ship===sh.id).length;const i=DATA.shipments.indexOf(sh);
-    return `<div class="imp-row" data-sid="${esc(sh.id)}"><div><b>${esc(ticketName(sh))}</b><div class="it-sub">${n} 件货已读取</div></div>
-      <label for="ir-${i}">${esc(t("eta"))}（选填）<input id="ir-${i}" type="date" data-f="eta" value="${esc(sh.eta)}"></label></div>`;}).join("")}
+  const gs=groups(lastImported);
+  if(!gs.length){box.innerHTML="";return;}
+  box.innerHTML=`<div class="imp-ok">${gs.map((g,i)=>{const ids=new Set(g.ships.map(x=>x.id));const n=DATA.items.filter(x=>ids.has(x.ship)).length;
+    return `<div class="imp-row" data-grp="${esc(g.key)}"><div><b>发票 ${esc(g.key)}</b><div class="it-sub">${n} 件货已读取</div></div>
+      <label for="ir-${i}">${esc(t("eta"))}（选填）<input id="ir-${i}" type="date" data-f="eta" value="${esc(gv(g,"eta"))}"></label></div>`;}).join("")}
     <div class="imp-save"><button type="button" class="btn big" data-save>保存并上传</button><span class="it-sub savemsg"></span></div></div>`;
-  box.oninput=box.onchange=e=>{const f=e.target.dataset.f;if(!f)return;const sh=shipById(e.target.closest("[data-sid]").dataset.sid);sh[f]=e.target.value;
-    const twin=document.querySelector(`#shipforms [data-sid="${CSS.escape(sh.id)}"] [data-f="${f}"]`); if(twin) twin.value=e.target.value; markDirty();};
+  box.oninput=box.onchange=onGrpInput;
   updateSaveMsg();
 }
 function showSaved(){
   const ids=lastImported.length?lastImported:[]; lastImported=[];
-  S.ship=ids.length===1?ids[0]:""; S.cat="";S.use="";S.q="";const q=$("#q");if(q)q.value="";
+  const ks=groups(ids).map(g=>g.key); S.ship=ks.length===1?ks[0]:""; S.cat="";S.use="";S.q="";const q=$("#q");if(q)q.value="";
   render(); window.scrollTo({top:0,behavior:"smooth"});
 }
 function markDirty(){dirty=true;buildIndex();renderShips();renderCats();renderList();updateSaveMsg();}
