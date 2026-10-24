@@ -226,7 +226,7 @@ const SB_URL="https://inerayabqrryrsuezlik.supabase.co";
 const SB_KEY="sb_publishable_-oC_xU9Fds-Re64XJnBFFw_-gOwB6ph";
 const SB_LIB="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js";
 let sbClient=null, ADMIN_PW="", SRC="";
-const VER="v10 · 2026-10-24";
+const VER="v11 · 2026-10-24";
 async function sb(){
   if(sbClient) return sbClient;
   await loadScript(SB_LIB);
@@ -625,12 +625,18 @@ async function importFiles(files){
       const buf=await f.arrayBuffer();
       const wb=XLSX.read(buf,{type:"array",cellFormula:true});
       // invoice meta from any sheet
-      const meta={};
+      const meta={}; const invFound=[];
       for(const sn of wb.SheetNames){const ws=wb.Sheets[sn];for(const a in ws){if(a[0]==="!")continue;const v=ws[a].v;if(typeof v!=="string")continue;
-        let m; if(!meta.inv&&(m=v.match(/INVOICE NO\.?\s*[:：]\s*(\S+)/i)))meta.inv=m[1];
+        let m; if((m=v.match(/INVOICE\s*NO\.?\s*[:：]?\s*([A-Z0-9][\w\-\/]*)/i))){invFound.push({inv:m[1].toUpperCase(),sheet:sn});}
         if(!meta.date&&/date\s*[:：]/i.test(v)&&(m=v.match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/)))meta.date=`${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`;
         if(!meta.route&&(m=v.match(/FROM:\s*(.+?)\s+TO\s+(.+)$/i)))meta.route=[m[1].trim(),m[2].trim()];
         if(!meta.size&&(m=v.match(/TOTAL:\s*\d+\s*X\s*(\w+)/i)))meta.size=m[1];}}
+      // 发票号：优先用文件名里的发票号；否则用 CI（商业发票）表里的
+      {const fnInv=(f.name.toUpperCase().match(/\d{2}[A-Z]{2}-\d{2,4}[A-Z]?/)||[])[0];
+       const uniq=[...new Set(invFound.map(x=>x.inv))];
+       const ci=invFound.find(x=>/^CI$|COMMERCIAL|INVOICE|发票/i.test(x.sheet));
+       meta.inv=(fnInv&&(uniq.includes(fnInv)||!uniq.length))?fnInv:(ci?ci.inv:uniq[0]);
+       if(uniq.length>1||(fnInv&&uniq.length&&!uniq.includes(fnInv))) lines.push(`⚠ ${f.name}：文件里写的发票号不一致（${uniq.map(u=>invFound.filter(x=>x.inv===u).map(x=>x.sheet+"表").join("、")+"："+u).join("；")}），已按 ${meta.inv} 导入，请让国内核对单据。`);}
       // loading sheet + header
       let ws=null,hr=-1,range;
       const cand=[...wb.SheetNames].sort((a,b)=>(/loading|装柜/i.test(b)?1:0)-(/loading|装柜/i.test(a)?1:0));
@@ -671,7 +677,10 @@ async function importFiles(files){
         const ship=cont||("INV-"+(meta.inv||f.name));
         let sh=shipById(ship);
         if(!sh.id){sh={id:ship,container:ship,seal:seal||"",size:meta.size||"",invoices:[],pol:meta.route?.[0]||"",pod:meta.route?.[1]||"",loaded:meta.date||"",etd:"",eta:"",etaFactory:"",status:"",vessel:"",note:""};DATA.shipments.push(sh);}
-        if(seal&&!sh.seal)sh.seal=seal; touched.add(sh.id);
+        if(seal&&!sh.seal)sh.seal=seal;
+        if(!touched.has(sh.id)){ // 第一次碰到这个柜：如果柜里原来的货全来自同一个文件，就按这次读到的发票号重来
+          const olds=DATA.items.filter(i=>i.ship===sh.id); if(olds.length&&olds.every(i=>i.src===f.name)) sh.invoices=[];
+          touched.add(sh.id);}
         if(meta.inv&&!sh.invoices.includes(meta.inv))sh.invoices.push(meta.inv);
         const id=ship+"|"+(pkg||name), h=fnv(id), num=x=>typeof x==="number"?x:(parseFloat(x)||null);
         const L=num(val(r,col.L)),W=num(val(r,col.W)),H=num(val(r,col.H)),K=num(val(r,col.pkgs));
@@ -680,7 +689,7 @@ async function importFiles(files){
         const photo=(await grab(r,col.photo,`photos/${h}_p.jpg`,640))||old?.photo||"";
         const lps=[];for(let j=0;j<lpCols.length;j++){const q=await grab(r,lpCols[j],`photos/${h}_L${j+1}.jpg`,900);if(q)lps.push(q);}
         p+=(photo&&pendingFiles[photo]?1:0)+lps.length;
-        const it={id,ship,pkg:pkg||name,name,ar:old?.ar||"",detail:String(val(r,col.detail)||"").replace(/^=/,""),cat:String(val(r,col.cat)||""),use:String(val(r,col.use)||""),size:String(val(r,col.size)||""),material:String(val(r,col.material)||""),
+        const it={id,ship,inv:meta.inv||"",pkg:pkg||name,name,ar:old?.ar||"",detail:String(val(r,col.detail)||"").replace(/^=/,""),cat:String(val(r,col.cat)||""),use:String(val(r,col.use)||""),size:String(val(r,col.size)||""),material:String(val(r,col.material)||""),
           qty:val(r,col.qty),unit:String(val(r,col.unit)||""),pkgs:K,pkgType:String(val(r,col.pkgType)||""),nw:num(val(r,col.nw)),gw:num(val(r,col.gw)),cbm:cbm!=null?+cbm.toFixed(3):null,photo,loadPhotos:lps.length?lps:(old?.loadPhotos||[]),src:f.name};
         seen.add(id);
         if(old){Object.assign(old,it);u++;}else{DATA.items.push(it);a++;}
