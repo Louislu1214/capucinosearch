@@ -226,7 +226,7 @@ const SB_URL="https://inerayabqrryrsuezlik.supabase.co";
 const SB_KEY="sb_publishable_-oC_xU9Fds-Re64XJnBFFw_-gOwB6ph";
 const SB_LIB="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js";
 let sbClient=null, ADMIN_PW="", SRC="";
-const VER="v9 · 2026-10-24";
+const VER="v10 · 2026-10-24";
 async function sb(){
   if(sbClient) return sbClient;
   await loadScript(SB_LIB);
@@ -450,7 +450,7 @@ async function load(){
     catch(e){DATA={shipments:[],items:[]};}
   }
   SRC=ok?"数据库":(GH_MODE?"备用文件（数据库暂无数据或连不上）":"页面数据");
-  DATA.shipments=DATA.shipments||[];DATA.items=DATA.items||[];
+  DATA.shipments=DATA.shipments||[];DATA.items=(DATA.items||[]).filter(i=>!/包装编号|packingno/.test(norm(i.pkg)));
   buildIndex();render();
 }
 render();load();
@@ -638,10 +638,14 @@ async function importFiles(files){
         for(let r=rg.s.r;r<=Math.min(rg.e.r,rg.s.r+120);r++){let a=false,b=false;for(let c=rg.s.c;c<=rg.e.c;c++){const x=w[XLSX.utils.encode_cell({r,c})];const s=x?norm(x.v):"";if(/包装编号|packingno|箱号|装柜编号/.test(s))a=true;if(/货物名称|description/.test(s))b=true;}
           if(a&&b){ws=w;hr=r;range=rg;break outer;}}}
       if(!ws){lines.push(`${f.name}: ${lang==="zh"?"没找到 LOADING DETAILS 表头（需包含「包装编号」和「货物名称」）":"No LOADING DETAILS header found"}`);continue;}
-      const col={}; const lpCols=[];
-      for(let c=range.s.c;c<=range.e.c;c++){const x=ws[XLSX.utils.encode_cell({r:hr,c})];const s=x?norm(x.v):"";if(!s)continue;
-        for(const [k,re] of COLS){if(col[k]===undefined&&re.test(s)){col[k]=c;break;}}}
-      if(col.lp!==undefined){lpCols.push(col.lp);for(let c=col.lp+1;c<=range.e.c;c++){const x=ws[XLSX.utils.encode_cell({r:hr,c})];if(x&&String(x.v).trim())break;lpCols.push(c);}}
+      // 每个柜子可能有自己的表头行，且列顺序可能不同：遇到表头就重新对应列
+      const hdrText=(r,c)=>{const x=ws[XLSX.utils.encode_cell({r,c})];return x?norm(x.v):"";};
+      const isHeader=r=>{let a=false,b=false;for(let c=range.s.c;c<=range.e.c;c++){const s=hdrText(r,c);if(/包装编号|packingno|箱号|装柜编号/.test(s))a=true;if(/货物名称|description/.test(s))b=true;}return a&&b;};
+      let col={}, lpCols=[];
+      const mapHeader=r=>{col={};lpCols=[];
+        for(let c=range.s.c;c<=range.e.c;c++){const s=hdrText(r,c);if(!s)continue;for(const [k,re] of COLS){if(col[k]===undefined&&re.test(s)){col[k]=c;break;}}}
+        if(col.lp!==undefined){lpCols.push(col.lp);for(let c=col.lp+1;c<=range.e.c;c++){if(hdrText(r,c))break;lpCols.push(c);}}};
+      mapHeader(hr); let headers=1;
       // merges
       const merged={};for(const m of ws["!merges"]||[]){const top=ws[XLSX.utils.encode_cell(m.s)];for(let r=m.s.r;r<=m.e.r;r++)for(let c=m.s.c;c<=m.e.c;c++)merged[r+","+c]=top;}
       const cell=(r,c)=>c===undefined?undefined:(ws[XLSX.utils.encode_cell({r,c})]||merged[r+","+c]);
@@ -653,8 +657,9 @@ async function importFiles(files){
           for(const m of x.matchAll(/name="(ID_[0-9A-Fa-f]+)"[\s\S]*?r:embed="(rId\d+)"/g)) if(rm[m[2]]) imgMap[m[1]]="xl/"+rm[m[2]].replace(/^\.?\//,"");}}catch(e){}
       const grab=async(r,c,path,maxw)=>{const x=cell(r,c);const fm=x&&(x.f||(typeof x.v==="string"?x.v:""));const m=fm&&String(fm).match(/ID_[0-9A-Fa-f]+/);if(!m||!imgMap[m[0]]||!zip)return "";const zf=zip.file(imgMap[m[0]]);if(!zf)return "";
         try{const b=await resizeJpeg(await zf.async("blob"),maxw);pendingFiles[path]=b;blobUrls[path]=URL.createObjectURL(b);return path;}catch(e){return "";}};
-      let cont="",seal="",n=0,a=0,u=0,p=0,lastPkg="",subN=0; const touched=new Set();
+      let cont="",seal="",n=0,a=0,u=0,p=0,lastPkg="",subN=0; const touched=new Set(), seen=new Set();
       for(let r=hr+1;r<=range.e.r;r++){
+        if(r>hr&&isHeader(r)){mapHeader(r);headers++;lastPkg="";subN=0;continue;}
         let pkg=String(val(r,col.pkg)||""),name=String(val(r,col.name)||"");
         const det=String(val(r,col.detail)||"");
         if(!pkg&&!name&&det&&lastPkg){ subN++; pkg=lastPkg+"-"+subN; name=det; }   // 同一箱里的配件明细行
@@ -677,12 +682,15 @@ async function importFiles(files){
         p+=(photo&&pendingFiles[photo]?1:0)+lps.length;
         const it={id,ship,pkg:pkg||name,name,ar:old?.ar||"",detail:String(val(r,col.detail)||"").replace(/^=/,""),cat:String(val(r,col.cat)||""),use:String(val(r,col.use)||""),size:String(val(r,col.size)||""),material:String(val(r,col.material)||""),
           qty:val(r,col.qty),unit:String(val(r,col.unit)||""),pkgs:K,pkgType:String(val(r,col.pkgType)||""),nw:num(val(r,col.nw)),gw:num(val(r,col.gw)),cbm:cbm!=null?+cbm.toFixed(3):null,photo,loadPhotos:lps.length?lps:(old?.loadPhotos||[]),src:f.name};
+        seen.add(id);
         if(old){Object.assign(old,it);u++;}else{DATA.items.push(it);a++;}
         if(!it.ar)newItems.push(old||it); n++;
       }
       for(const x of touched) if(!lastImported.includes(x)) lastImported.push(x);
+      if(n){const before=DATA.items.length;DATA.items=DATA.items.filter(i=>i.src!==f.name||seen.has(i.id));const gone=before-DATA.items.length;if(gone)lines.push(`${f.name}：清除了上次导入的 ${gone} 行旧数据`);
+        const used=new Set(DATA.items.map(i=>i.ship));DATA.shipments=DATA.shipments.filter(x=>used.has(x.id));}
       if(!n) lines.push(`⚠ ${f.name}：没有读到任何货物行，请把这个文件发给技术人员检查格式。`);
-      lines.push(ta("imported",{f:f.name,n,a,u,p})+(meta.inv?`（发票 ${meta.inv}）`:"（没读到发票号）"));
+      lines.push(ta("imported",{f:f.name,n,a,u,p})+(headers>1?`，共 ${headers} 段表头`:"")+(meta.inv?`（发票 ${meta.inv}）`:"（没读到发票号）"));
     }catch(e){lines.push(`${f.name}: ${e&&e.message||e}`);}
     log.textContent=lines.join("\n")+"\n清单已读取，可以直接点下方按钮保存。";
   }
