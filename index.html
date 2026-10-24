@@ -226,7 +226,7 @@ const SB_URL="https://inerayabqrryrsuezlik.supabase.co";
 const SB_KEY="sb_publishable_-oC_xU9Fds-Re64XJnBFFw_-gOwB6ph";
 const SB_LIB="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js";
 let sbClient=null, ADMIN_PW="", SRC="";
-const VER="v11 · 2026-10-24";
+const VER="v12";
 async function sb(){
   if(sbClient) return sbClient;
   await loadScript(SB_LIB);
@@ -454,6 +454,9 @@ async function load(){
   buildIndex();render();
 }
 render();load();
+if(GH_MODE){(async()=>{try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});const v=(await r.json()).ver;
+  if(v&&v!==VER){let k="eta-reload-"+v;let done=false;try{done=sessionStorage.getItem(k)==="1";sessionStorage.setItem(k,"1");}catch(e){}
+    if(!done) location.replace(location.pathname+"?v="+encodeURIComponent(v));}}catch(e){}})();}
 
 /* ================= admin ================= */
 /* 两种运行环境：Claude 页面（用平台保存），或 GitHub Pages 等普通网站（用 GitHub 令牌保存） */
@@ -635,8 +638,8 @@ async function importFiles(files){
       {const fnInv=(f.name.toUpperCase().match(/\d{2}[A-Z]{2}-\d{2,4}[A-Z]?/)||[])[0];
        const uniq=[...new Set(invFound.map(x=>x.inv))];
        const ci=invFound.find(x=>/^CI$|COMMERCIAL|INVOICE|发票/i.test(x.sheet));
-       meta.inv=(fnInv&&(uniq.includes(fnInv)||!uniq.length))?fnInv:(ci?ci.inv:uniq[0]);
-       if(uniq.length>1||(fnInv&&uniq.length&&!uniq.includes(fnInv))) lines.push(`⚠ ${f.name}：文件里写的发票号不一致（${uniq.map(u=>invFound.filter(x=>x.inv===u).map(x=>x.sheet+"表").join("、")+"："+u).join("；")}），已按 ${meta.inv} 导入，请让国内核对单据。`);}
+       meta.inv=fnInv||(ci?ci.inv:uniq[0]);
+       if(uniq.length>1||(fnInv&&uniq.length&&!uniq.includes(fnInv))) lines.push(`⚠ ${f.name}：文件名和单据里写的发票号不一致（文件名：${fnInv||"无"}；${uniq.map(u=>invFound.filter(x=>x.inv===u).map(x=>x.sheet+"表").join("、")+"："+u).join("；")}），已按 ${meta.inv} 导入（以文件名为准），请让国内核对单据。`);}
       // loading sheet + header
       let ws=null,hr=-1,range;
       const cand=[...wb.SheetNames].sort((a,b)=>(/loading|装柜/i.test(b)?1:0)-(/loading|装柜/i.test(a)?1:0));
@@ -663,7 +666,7 @@ async function importFiles(files){
           for(const m of x.matchAll(/name="(ID_[0-9A-Fa-f]+)"[\s\S]*?r:embed="(rId\d+)"/g)) if(rm[m[2]]) imgMap[m[1]]="xl/"+rm[m[2]].replace(/^\.?\//,"");}}catch(e){}
       const grab=async(r,c,path,maxw)=>{const x=cell(r,c);const fm=x&&(x.f||(typeof x.v==="string"?x.v:""));const m=fm&&String(fm).match(/ID_[0-9A-Fa-f]+/);if(!m||!imgMap[m[0]]||!zip)return "";const zf=zip.file(imgMap[m[0]]);if(!zf)return "";
         try{const b=await resizeJpeg(await zf.async("blob"),maxw);pendingFiles[path]=b;blobUrls[path]=URL.createObjectURL(b);return path;}catch(e){return "";}};
-      let cont="",seal="",n=0,a=0,u=0,p=0,lastPkg="",subN=0; const touched=new Set(), seen=new Set();
+      let cont="",seal="",n=0,a=0,u=0,p=0,lastPkg="",subN=0; const dupN={}; const touched=new Set(), seen=new Set();
       for(let r=hr+1;r<=range.e.r;r++){
         if(r>hr&&isHeader(r)){mapHeader(r);headers++;lastPkg="";subN=0;continue;}
         let pkg=String(val(r,col.pkg)||""),name=String(val(r,col.name)||"");
@@ -682,7 +685,8 @@ async function importFiles(files){
           const olds=DATA.items.filter(i=>i.ship===sh.id); if(olds.length&&olds.every(i=>i.src===f.name)) sh.invoices=[];
           touched.add(sh.id);}
         if(meta.inv&&!sh.invoices.includes(meta.inv))sh.invoices.push(meta.inv);
-        const id=ship+"|"+(pkg||name), h=fnv(id), num=x=>typeof x==="number"?x:(parseFloat(x)||null);
+        let id=ship+"|"+(pkg||name); dupN[id]=(dupN[id]||0)+1; if(dupN[id]>1) id+="#"+dupN[id];
+        const h=fnv(id), num=x=>typeof x==="number"?x:(parseFloat(x)||null);
         const L=num(val(r,col.L)),W=num(val(r,col.W)),H=num(val(r,col.H)),K=num(val(r,col.pkgs));
         let cbm=num(val(r,col.cbm)); if(cbm==null&&L&&W&&H&&K)cbm=+(L*W*H/1e9*K).toFixed(3);
         const old=DATA.items.find(i=>i.id===id);
